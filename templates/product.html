@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% macro product_card(product) %}
+<div class="product-card">
+    <div class="product-img-wrap">
+        <a href="{{ url_for('public.product_detail', id=product.id) }}">
+            <img src="{{ product.img }}" alt="{{ product.name }}" loading="lazy">
+        </a>
+        {% if product.badge %}
+        <span class="product-badge {{ product.badge.lower() }}">
+            {{ product.badge }}
+        </span>
+        {% endif %}
+        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}" onclick="toggleWishlist(event, '{{ product.id }}')">
+            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist" alt="wishlist">
+        </div>
+    </div>
+    <div class="product-info">
+        <div class="product-category">{{ product.cat_name }}</div>
+        <div class="product-name">{{ product.name }}</div>
+        <div class="product-prices">
+            <span class="product-price">{{ product.price }}</span>
+            <span class="product-price-original">{{ product.orig }}</span>
+        </div>
+        <button class="product-add-btn">Add to Cart</button>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="product-detail-page">
+    <div class="detail-container">
+        <!-- LEFT: IMAGE VIEW -->
+        <div class="product-gallery">
+            <div class="main-img">
+                <img src="{{ product.img }}" alt="{{ product.name }}" id="mainProductImg">
+            </div>
+            {% if product.size_chart %}
+            <div class="size-chart-link-wrap">
+                <a href="#sizeChartModal" class="size-chart-link"><i class="fas fa-ruler-combined"></i> View Size Chart</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT: INFO SECTION -->
+        <div class="product-info-sect">
+            <div class="detail-cat">
+                {{ product.category.name if product.category else product.cat_name }}
+                {% if product.subcategory %}
+                <span class="cat-sep">/</span> {{ product.subcategory.name }}
+                {% endif %}
+            </div>
+            <h1>{{ product.name }}</h1>
+            <div class="detail-price-row">
+                <span class="current-price">{{ product.price }}</span>
+                {% if product.orig %}
+                <span class="orig-price">{{ product.orig }}</span>
+                <span class="discount-tag">Offer</span>
+                {% endif %}
+            </div>
+
+            <div class="stock-status {{ product.stock_status }}">
+                {% if product.stock_status == 'instock' %}
+                    <i class="fas fa-check-circle"></i> In Stock
+                {% else %}
+                    <i class="fas fa-times-circle"></i> Out of Stock
+                {% endif %}
+            </div>
+            
+            <p class="description">
+                {% if product.desc %}
+                    {{ product.desc }}
+                {% else %}
+                    Exquisite hand-threaded silk saree featuring traditional motifs and a contrasting border. Perfect for weddings and high-profile festive events. Lightweight yet luxurious feel with a rich pallu.
+                {% endif %}
+            </p>
+
+            {% if product.sizes %}
+            <div class="variant-sect">
+                <div class="variant-header">
+                    <h4>Select Size</h4>
+                </div>
+                <div class="size-options selector-group" id="sizeSelector">
+                    {% for size in product.sizes.split(',') %}
+                    <button class="size-btn {{ 'active' if loop.first }}" data-size="{{ size.strip() }}">{{ size.strip() }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if product.colors %}
+            <div class="variant-sect">
+                <div class="variant-header">
+                    <h4>Select Color</h4>
+                </div>
+                <div class="color-options selector-group" id="colorSelector">
+                    {% for color in product.colors.split(',') %}
+                    <button class="color-btn {{ 'active' if loop.first }}" data-color="{{ color.strip() }}">{{ color.strip() }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="action-btns">
+                <button class="add-to-cart" data-id="{{ product.id }}" onclick="addToCart(this)">Add to Cart</button>
+                <button class="wishlist-btn-large {% if product.id in session.get('wishlist', []) %}active{% endif %}" onclick="toggleWishlist(event, '{{ product.id }}', true)">
+                    <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
+                </button>
+            </div>
+
+            <div class="trust-points">
+                <div class="point">✨ Authentic Handloom</div>
+                <div class="point">🚚 Free Shipping across India</div>
+                <div class="point">🔄 7-Day Easy Returns</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RELATED PRODUCTS -->
+    <section class="related-products">
+        <h2 class="related-title">You May Also Like</h2>
+        <div class="related-grid">
+            {% for p in related %}
+                {{ product_card(p) }}
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+<!-- Size Chart Modal -->
+{% if product.size_chart %}
+<div id="sizeChartModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Size Chart</h2>
+        <img src="{{ product.size_chart }}" alt="Size Chart" style="width: 100%; border-radius: 10px;">
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .size-chart-link-wrap {
+        margin-top: 1rem;
+        text-align: center;
+    }
+    .size-chart-link {
+        color: var(--crimson);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .size-chart-link:hover {
+        text-decoration: underline;
+    }
+    .variant-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .size-btn {
+        padding: 10px 20px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .size-btn.active {
+        border-color: var(--crimson);
+        background: var(--crimson);
+        color: #fff;
+    }
+    .color-btn {
+        padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: 0.3s;
+    }
+    .color-btn.active {
+        border-color: var(--crimson);
+        background: #fff5f6;
+        color: var(--crimson);
+    }
+    .stock-status {
+        margin: 1rem 0;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .stock-status.instock { color: #10b981; }
+    .stock-status.outofstock { color: #ef4444; }
+
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.6);
+        backdrop-filter: blur(5px);
+    }
+    .modal-content {
+        background-color: #fff;
+        margin: 5% auto;
+        padding: 30px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 600px;
+        position: relative;
+    }
+    .close-modal {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Variation selection (Size & Color)
+    document.querySelectorAll('.selector-group').forEach(group => {
+        const btns = group.querySelectorAll('button');
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    });
+
+    function addToCart(btn) {
+        const productId = btn.getAttribute('data-id');
+        const sizeBtn = document.querySelector('#sizeSelector .size-btn.active');
+        const colorBtn = document.querySelector('#colorSelector .color-btn.active');
+        const size = sizeBtn ? sizeBtn.getAttribute('data-size') : '';
+        const color = colorBtn ? colorBtn.getAttribute('data-color') : '';
+        
+        const formData = new FormData();
+        formData.append('size', size);
+        formData.append('color', color);
+        
+        fetch(`/add-to-cart/${productId}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const badge = document.getElementById('cartBadge');
+                if (badge) badge.innerText = data.cart_count;
+                
+                const originalText = btn.innerText;
+                btn.innerText = 'Added to Bag!';
+                btn.style.background = '#10b981';
+                btn.style.color = '#fff';
+                
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                }, 2000);
+            }
+        });
+    }
+
+    // Modal logic
+    const modal = document.getElementById("sizeChartModal");
+    const link = document.querySelector(".size-chart-link");
+    const close = document.querySelector(".close-modal");
+
+    if (link) {
+        link.onclick = function(e) {
+            e.preventDefault();
+            modal.style.display = "block";
+        }
+    }
+
+    if (close) {
+        close.onclick = function() {
+            modal.style.display = "none";
+        }
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+</script>
+{% endblock %}

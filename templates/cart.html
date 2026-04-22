@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Your Shopping Bag – Naye Leithe{% endblock %}
+
+{% block content %}
+<div class="cart-page">
+    <div class="cart-container">
+        <div class="cart-header">
+            <h1>Your Shopping Bag</h1>
+            <p>You have {{ cart_count }} items in your bag</p>
+        </div>
+
+        {% if cart_items %}
+        <div class="cart-flex">
+            <!-- Left: Items Table -->
+            <div class="cart-items-wrap">
+                <table class="cart-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in cart_items %}
+                        <tr>
+                            <td class="product-cell">
+                                <div class="cart-prod-info">
+                                    <img src="{{ item.product.img }}" alt="{{ item.product.name }}">
+                                    <div>
+                                         <div class="cart-prod-cat">{{ item.product.cat_name }}</div>
+                                         <div class="cart-prod-name">{{ item.product.name }}</div>
+                                         {% if item.size or item.color %}
+                                         <div class="cart-prod-variants">
+                                             {% if item.size and item.size != 'NA' %}<span>Size: {{ item.size }}</span>{% endif %}
+                                             {% if item.color and item.color != 'NA' %}<span>Color: {{ item.color }}</span>{% endif %}
+                                         </div>
+                                         {% endif %}
+                                     </div>
+                                </div>
+                            </td>
+                            <td>{{ item.product.price }}</td>
+                            <td>
+                                <form action="{{ url_for('update_cart', id=item.product.id) }}" method="POST" class="qty-form">
+                                    <div class="qty-control">
+                                        <button type="submit" name="quantity" value="{{ item.quantity - 1 }}">-</button>
+                                        <input type="number" name="quantity" value="{{ item.quantity }}" readonly>
+                                        <button type="submit" name="quantity" value="{{ item.quantity + 1 }}">+</button>
+                                    </div>
+                                </form>
+                            </td>
+                            <td class="item-total-cell">{{ item.item_total }}</td>
+                            <td>
+                                <a href="{{ url_for('remove_from_cart', id=item.product.id) }}" class="remove-btn">
+                                    <img src="https://api.iconify.design/lucide:trash-2.svg?color=%238a7f78" alt="remove">
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="cart-footer-links">
+                    <a href="/shop" class="continue-link">
+                        <img src="https://api.iconify.design/lucide:arrow-left.svg?color=%238b1a2a" alt="arrow">
+                        Continue Shopping
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right: Summary Card -->
+            <div class="cart-summary">
+                <div class="summary-card">
+                    <h3>Order Summary</h3>
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span class="subtotal-val">{{ subtotal }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Shipping</span>
+                        <span class="free-text">FREE</span>
+                    </div>
+                    <div class="summary-divider"></div>
+                    <div class="summary-row total-row">
+                        <span>Estimated Total</span>
+                        <span class="subtotal-val">{{ subtotal }}</span>
+                    </div>
+                    <p class="tax-info">Tax included. Shipping calculated at checkout.</p>
+                    <button class="checkout-btn">Proceed to Checkout</button>
+                    
+                    <div class="secure-info">
+                        <img src="https://api.iconify.design/lucide:shield-check.svg?color=%235a7a3b" alt="secure">
+                        Secure SSL Encryption & Data Protection
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-cart">
+            <img src="https://api.iconify.design/lucide:shopping-bag.svg?color=%23d88c9a" alt="empty">
+            <h2>Your bag is empty</h2>
+            <p>Looks like you haven't added anything to your bag yet.</p>
+            <a href="/shop" class="btn-primary">Discover Collections</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.querySelectorAll('.qty-control button').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const row = this.closest('tr');
+            const form = this.closest('form');
+            const productId = form.getAttribute('action').split('/').pop();
+            const input = row.querySelector('input[name="quantity"]');
+            const isPlus = this.innerText === '+';
+            let newQty = parseInt(input.value) + (isPlus ? 1 : -1);
+            
+            if (newQty < 1) return;
+
+            fetch(`/update-cart/${productId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ quantity: newQty })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = newQty;
+                    row.querySelector('.item-total-cell').innerText = data.item_total;
+                    document.querySelectorAll('.subtotal-val').forEach(el => el.innerText = data.subtotal);
+                    document.getElementById('cartBadge').innerText = data.cart_count;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

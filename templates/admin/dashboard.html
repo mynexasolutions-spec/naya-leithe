@@ -1,0 +1,112 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="header-left">
+        <h1>Welcome back, Admin</h1>
+        <p>Here's what's happening with your store today.</p>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--sand); color: var(--primary);">
+            <i class="fas fa-shopping-bag"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Total Sales</h3>
+            <p class="stat-value">₹1,24,500</p>
+            <span class="stat-change positive"><i class="fas fa-arrow-up"></i> 12%</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--sand); color: var(--primary);">
+            <i class="fas fa-truck"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Orders</h3>
+            <p class="stat-value">{{ orders_count }}</p>
+            <span class="stat-change positive"><i class="fas fa-arrow-up"></i> 5%</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--sand); color: var(--primary);">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Customers</h3>
+            <p class="stat-value">{{ users_count }}</p>
+            <span class="stat-change positive"><i class="fas fa-arrow-up"></i> 8%</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--sand); color: var(--primary);">
+            <i class="fas fa-box"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Products</h3>
+            <p class="stat-value">{{ products_count }}</p>
+            <span class="stat-change">Active</span>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-sections">
+    <div class="section-card recent-orders">
+        <div class="card-header">
+            <h2>Recent Orders</h2>
+            <a href="{{ url_for('admin.orders') }}" class="view-all">View All</a>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td>#{{ order.order_number }}</td>
+                        <td>{{ order.user.username or order.user.email }}</td>
+                        <td>{{ order.date.strftime('%b %d, %Y') }}</td>
+                        <td>{{ order.total_amount }}</td>
+                        <td><span class="status-badge {{ 'warning' if order.status == 'Pending' else 'info' }}">{{ order.status }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem;">No recent orders found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="section-card low-stock">
+        <div class="card-header">
+            <h2>Low Stock Products</h2>
+        </div>
+        <ul class="stock-list">
+            {% for product in low_stock_products %}
+            <li>
+                <img src="{{ product.img }}" alt="{{ product.name }}">
+                <div class="stock-info">
+                    <h4>{{ product.name }}</h4>
+                    <span>{{ 'Out of Stock' if product.stock_status == 'outofstock' else 'In Stock' }}</span>
+                </div>
+                <div class="stock-level-bar">
+                    <div class="level" style="width: {{ '0%' if product.stock_status == 'outofstock' else '100%' }}; background: {{ '#ef4444' if product.stock_status == 'outofstock' else '#10b981' }};"></div>
+                </div>
+            </li>
+            {% else %}
+            <p style="padding: 1rem; color: var(--text-muted);">All products are well stocked.</p>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

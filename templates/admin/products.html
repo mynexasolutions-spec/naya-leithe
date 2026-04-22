@@ -1,0 +1,100 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-left">
+        <h1>Products</h1>
+        <p>Manage your inventory and product listings.</p>
+    </div>
+    <div class="header-right">
+        <a href="{{ url_for('admin.new_product') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Add New Product</a>
+    </div>
+</div>
+
+<div class="section-card">
+    <div class="table-filters">
+        <div class="filter-group">
+            <select id="categoryFilter">
+                <option value="all">All Categories</option>
+                <option value="Saree">Saree</option>
+                <option value="Western Wear">Western Wear</option>
+                <option value="Ethnic Wear">Ethnic Wear</option>
+            </select>
+            <select id="statusFilter">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="draft">Draft</option>
+            </select>
+        </div>
+        <div class="search-input">
+            <input type="text" id="productSearch" placeholder="Search products...">
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="productsTable">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Badge</th>
+                    <th>Sizes</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                <tr>
+                    <td>
+                        <div class="product-cell">
+                            <img src="{{ product.img }}" alt="{{ product.name }}">
+                            <div class="product-info">
+                                <strong>{{ product.name }}</strong>
+                                <span>ID: {{ product.id }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ product.cat_name }}</td>
+                    <td><span class="price-text">{{ product.price }}</span></td>
+                    <td><span class="badge-tag">{{ product.badge or '-' }}</span></td>
+                    <td><span class="size-text">{{ product.sizes or '-' }}</span></td>
+                    <td><span class="status-badge success">Active</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{{ url_for('admin.edit_product', id=product.id) }}" class="btn-icon" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('admin.delete_product', id=product.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
+                                <button type="submit" class="btn-icon delete" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Basic search functionality
+    document.getElementById('productSearch').addEventListener('keyup', function() {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#productsTable tbody tr');
+        
+        rows.forEach(row => {
+            const name = row.querySelector('.product-info strong').textContent.toLowerCase();
+            const id = row.querySelector('.product-info span').textContent.toLowerCase();
+            if (name.includes(query) || id.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

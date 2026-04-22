@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Naye Leithe</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="/static/images/logo.png" alt="Logo" class="admin-logo">
+                <span class="brand-name">Naye Leithe</span>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="{{ 'active' if request.endpoint == 'admin.dashboard' }}">
+                        <a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-chart-line"></i> Dashboard</a>
+                    </li>
+                    <li class="{{ 'active' if 'product' in request.endpoint }}">
+                        <a href="{{ url_for('admin.products') }}"><i class="fas fa-box"></i> Products</a>
+                    </li>
+                    <li class="{{ 'active' if 'category' in request.endpoint }}">
+                        <a href="{{ url_for('admin.categories') }}"><i class="fas fa-list"></i> Categories</a>
+                    </li>
+                    <li class="{{ 'active' if 'order' in request.endpoint }}">
+                        <a href="{{ url_for('admin.orders') }}"><i class="fas fa-shopping-cart"></i> Orders</a>
+                    </li>
+                    <li class="{{ 'active' if 'customer' in request.endpoint }}">
+                        <a href="{{ url_for('admin.customers') }}"><i class="fas fa-users"></i> Customers</a>
+                    </li>
+                    <li class="{{ 'active' if 'setting' in request.endpoint }}">
+                        <a href="{{ url_for('admin.settings') }}"><i class="fas fa-cog"></i> Settings</a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="{{ url_for('public.home') }}" class="view-site-btn"><i class="fas fa-external-link-alt"></i> View Main Site</a>
+                <a href="{{ url_for('auth.logout') }}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="mobile-toggle" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search anything...">
+                    </div>
+                </div>
+                <div class="header-right">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                      {% if messages %}
+                        {% for category, message in messages %}
+                          <div class="flash-alert flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                      {% endif %}
+                    {% endwith %}
+                    
+                    <div class="header-icon-btn notifications-dropdown">
+                        <i class="far fa-bell"></i>
+                        {% if admin_notifications %}
+                        <span class="badge">{{ admin_notifications|length }}</span>
+                        {% endif %}
+                        <div class="dropdown-content">
+                            <div class="dropdown-header">
+                                Notifications
+                                {% if admin_notifications %}
+                                <span class="mark-all">Mark as read</span>
+                                {% endif %}
+                            </div>
+                            {% if admin_notifications %}
+                                {% for notif in admin_notifications %}
+                                <a href="#" class="notif-item {{ notif.type }}">
+                                    <div class="notif-text">{{ notif.text }}</div>
+                                    <div class="notif-time">{{ notif.time }}</div>
+                                </a>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-notif">No new notifications</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="admin-profile-dropdown">
+                        <div class="user-profile">
+                            <div class="profile-circle">AD</div>
+                            <span>Admin <i class="fas fa-chevron-down"></i></span>
+                        </div>
+                        <div class="dropdown-content">
+                            <div class="dropdown-header">Account</div>
+                            <a href="#"><i class="fas fa-user-circle"></i> Profile</a>
+                            <a href="{{ url_for('admin.settings') }}"><i class="fas fa-cog"></i> Settings</a>
+                            <hr>
+                            <a href="{{ url_for('auth.logout') }}" class="text-danger"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <section class="content-area">
+                {% block content %}{% endblock %}
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.querySelector('.admin-container').classList.toggle('sidebar-active');
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            const container = document.querySelector('.admin-container');
+            const sidebar = document.querySelector('.sidebar');
+            const toggle = document.getElementById('sidebarToggle');
+            
+            if (container && sidebar && toggle && window.innerWidth <= 1024 && 
+                container.classList.contains('sidebar-active') && 
+                !sidebar.contains(e.target) && 
+                !toggle.contains(e.target)) {
+                container.classList.remove('sidebar-active');
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-left">
+        <h1>Orders</h1>
+        <p>Manage and track customer orders.</p>
+    </div>
+</div>
+
+<div class="section-card">
+    {% if orders %}
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td><strong>{{ order.order_number }}</strong></td>
+                    <td>{{ order.user.email }}</td>
+                    <td>{{ order.date.strftime('%b %d, %Y') }}</td>
+                    <td>{{ order.total_amount }}</td>
+                    <td><span class="status-badge {{ order.status.lower() }}">{{ order.status }}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn-icon" title="View Details"><i class="fas fa-eye"></i></button>
+                            <button class="btn-icon" title="Update Status"><i class="fas fa-edit"></i></button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-shopping-cart"></i>
+        <h3>No orders found</h3>
+        <p>Your customers haven't placed any orders yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #888;
+    }
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    .status-badge.pending { background: #fff7ed; color: #f97316; }
+    .status-badge.processing { background: #eff6ff; color: #3b82f6; }
+    .status-badge.delivered { background: #f0fdf4; color: #22c55e; }
+</style>
+{% endblock %}

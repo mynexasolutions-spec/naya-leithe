@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}My Wishlist — Naye Leithe{% endblock %}
+
+{% block content %}
+<div class="wishlist-page">
+    <div class="page-header">
+        <div class="header-tag"><span>✦</span> My Favorites</div>
+        <h1>Your Curated Collection</h1>
+        <p>Save your favorite pieces for later and build your dream wardrobe.</p>
+    </div>
+
+    {% if products %}
+    <div class="products-grid">
+        {% for product in products %}
+        <div class="product-card wishlist-card" id="wish-card-{{ product.id }}">
+            <div class="product-img-wrap">
+                <a href="/product/{{ product.id }}">
+                    <img src="{{ product.img }}" alt="{{ product.name }}">
+                </a>
+                <div class="product-remove-wishlist" onclick="removeFromWishlist('{{ product.id }}')">
+                    <img src="https://api.iconify.design/lucide:x.svg?color=%23ffffff" class="icon-img" alt="remove">
+                </div>
+            </div>
+            <div class="product-info">
+                <div class="product-category">{{ product.cat_name }}</div>
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-prices">
+                    <span class="product-price">{{ product.price }}</span>
+                    {% if product.orig %}<span class="product-price-original">{{ product.orig }}</span>{% endif %}
+                </div>
+                <button class="product-add-btn" data-id="{{ product.id }}">Move to Cart</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <img src="https://api.iconify.design/lucide:heart.svg?color=%23efcad0" alt="empty wishlist">
+        <h2>Your wishlist is empty</h2>
+        <p>Start exploring our collections and save your favorite pieces here.</p>
+        <a href="{{ url_for('public.shop') }}" class="btn-primary">Shop Now</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .wishlist-page { padding: 40px 48px 100px; background: var(--warm-white); min-height: 70vh; }
+    .wishlist-card { position: relative; }
+    .product-remove-wishlist {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 30px;
+        height: 30px;
+        background: rgba(0,0,0,0.4);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 5;
+    }
+    .product-remove-wishlist:hover { background: var(--crimson); transform: scale(1.1); }
+    .product-remove-wishlist .icon-img { width: 14px; height: 14px; }
+
+    .empty-state { text-align: center; padding: 100px 20px; }
+    .empty-state img { width: 80px; height: 80px; margin-bottom: 24px; opacity: 0.5; }
+    .empty-state h2 { font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 12px; }
+    .empty-state p { color: var(--muted); margin-bottom: 30px; }
+
+    @media (max-width: 900px) {
+        .wishlist-page { padding: 40px 20px; }
+    }
+</style>
+
+<script>
+function removeFromWishlist(productId) {
+    fetch(`/toggle-wishlist/${productId}`, { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success && data.action === 'removed') {
+            const card = document.getElementById(`wish-card-${productId}`);
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                card.remove();
+                if (document.querySelectorAll('.wishlist-card').length === 0) {
+                    location.reload();
+                }
+                const badge = document.getElementById('wishlistBadge');
+                if (badge) badge.innerText = data.wishlist_count;
+            }, 300);
+        }
+    });
+}
+</script>
+{% endblock %}

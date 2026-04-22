@@ -1,0 +1,118 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-left">
+        <h1>Customers</h1>
+        <p>View and manage your registered customers.</p>
+    </div>
+</div>
+
+<div class="section-card">
+    <div class="table-filters">
+        <div class="search-input">
+            <input type="text" id="customerSearch" placeholder="Search customers by email or name...">
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="customersTable">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Email</th>
+                    <th>Joined Date</th>
+                    <th>Total Orders</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>
+                        <div class="user-cell">
+                            <div class="avatar-circle" style="background: {{ ['#f59e0b', '#4f46e5', '#10b981', '#ef4444'] | random }};">
+                                {{ user.email[0:2].upper() }}
+                            </div>
+                            <div class="user-meta">
+                                <strong>{{ user.username or user.email.split('@')[0] }}</strong>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.join_date.strftime('%b %Y') if user.join_date else 'Oct 2023' }}</td>
+                    <td><span class="badge-tag">{{ user.orders|length }}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="{{ url_for('admin.orders', customer_id=user.id) }}" class="btn-icon" title="View Order History">
+                                <i class="fas fa-history"></i>
+                            </a>
+                            <form action="{{ url_for('admin.delete_customer', id=user.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this customer? This will delete their account permanently.');">
+                                <button type="submit" class="btn-icon delete" title="Suspend Account">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .user-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+    .user-meta strong {
+        color: #1e293b;
+        font-weight: 700;
+    }
+    .badge-tag {
+        background: #f1f5f9;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        color: #475569;
+    }
+    #customerSearch {
+        width: 100%;
+        padding: 10px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        outline: none;
+    }
+</style>
+
+<script>
+    document.getElementById('customerSearch').addEventListener('keyup', function() {
+        const query = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#customersTable tbody tr');
+        
+        rows.forEach(row => {
+            const name = row.querySelector('.user-meta strong').textContent.toLowerCase();
+            const email = row.cells[1].textContent.toLowerCase();
+            if (name.includes(query) || email.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

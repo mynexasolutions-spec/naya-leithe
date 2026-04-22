@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Naye Leithe – Discover Your Signature Style{% endblock %}</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div class="app">
+        <!-- Announcement Bar -->
+        <div class="announcement-bar">
+            <img src="https://api.iconify.design/lucide:tag.svg?color=%23ffffff" class="icon-img" alt="tag">
+            <span>30% off storewide — Limited time!</span>
+            <a href="#">Shop Now</a>
+        </div>
+
+        <!-- Navbar -->
+        <nav>
+            <div class="nav-logo">Naye Leithe</div>
+            <div class="nav-links" id="navLinks">
+                <a href="{{ url_for('public.home') }}"
+                    class="{% if request.endpoint == 'public.home' %}active{% endif %}">Home</a>
+                <div class="dropdown">
+                    <a href="{{ url_for('public.shop') }}"
+                        class="{% if request.endpoint == 'public.shop' %}active{% endif %}">Shop <i
+                            class="fas fa-chevron-down"></i></a>
+                    <div class="dropdown-menu">
+                        {% for cat in all_categories %}
+                        <div class="mega-col">
+                            <div class="cat-group"><a href="{{ url_for('public.shop', category=cat.name) }}">{{ cat.name
+                                    }}</a></div>
+                            {% for sub in cat.subcategories %}
+                            <a href="{{ url_for('public.shop', subcategory=sub.name) }}">{{ sub.name }}</a>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <a href="{{ url_for('public.blogs') }}"
+                    class="{% if request.endpoint == 'public.blogs' %}active{% endif %}">Blogs</a>
+                <a href="{{ url_for('public.about') }}"
+                    class="{% if request.endpoint == 'public.about' %}active{% endif %}">About Us</a>
+            </div>
+            <div class="nav-actions">
+                <div class="nav-search">
+                    <img src="https://api.iconify.design/lucide:search.svg?color=%238a7f78" class="icon-img"
+                        alt="search">
+                    <input type="text" placeholder="Search Products">
+                </div>
+                <a class="nav-icon-btn" href="{{ url_for('public.wishlist') }}">
+                    <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
+                    <span class="badge" id="wishlistBadge">{{ wishlist_count }}</span>
+                </a>
+
+                {% if session.get('user_id') %}
+                {% if session.get('is_admin') %}
+                <a class="nav-icon-btn admin-link" href="{{ url_for('admin.dashboard') }}" title="Admin Dashboard">
+                    <img src="https://api.iconify.design/lucide:shield-check.svg?color=%238b1a2a" alt="admin">
+                </a>
+                {% endif %}
+                <a class="nav-icon-btn" href="{{ url_for('auth.profile') }}" title="My Profile">
+                    <img src="https://api.iconify.design/lucide:user.svg?color=%232d2d2d" alt="user">
+                </a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" class="nav-auth-link">Login / Signup</a>
+                {% endif %}
+
+                <a class="nav-icon-btn" href="{{ url_for('cart.view_cart') }}">
+                    <img src="https://api.iconify.design/lucide:shopping-bag.svg?color=%232d2d2d" alt="cart">
+                    <span class="badge" id="cartBadge">{{ cart_count }}</span>
+                </a>
+            </div>
+            <div class="menu-toggle" id="menuToggle">
+                <img src="https://api.iconify.design/lucide:menu.svg?color=%238b1a2a" class="icon-img" alt="menu"
+                    id="menuIcon">
+            </div>
+        </nav>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <span class="nav-logo">Naye Leithe</span>
+                    <p>Your destination for authentic ethnic and contemporary fashion. Every piece tells a story of
+                        craftsmanship and elegance.</p>
+                    <div class="footer-social">
+                        <a class="social-btn" href="#"><img
+                                src="https://api.iconify.design/lucide:instagram.svg?color=%23ffffff"
+                                alt="instagram"></a>
+                        <a class="social-btn" href="#"><img
+                                src="https://api.iconify.design/lucide:facebook.svg?color=%23ffffff" alt="facebook"></a>
+                        <a class="social-btn" href="#"><img
+                                src="https://api.iconify.design/fa6-brands:pinterest-p.svg?color=%23ffffff"
+                                alt="pinterest"></a>
+                        <a class="social-btn" href="#"><img
+                                src="https://api.iconify.design/lucide:youtube.svg?color=%23ffffff" alt="youtube"></a>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>Shop</h4>
+                    {% for cat in all_categories %}
+                    <a href="{{ url_for('public.shop', category=cat.name) }}">{{ cat.name }}</a>
+                    {% endfor %}
+                    <a href="#">New Arrivals</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Help</h4>
+                    <a href="#">Track Order</a>
+                    <a href="#">Shipping Policy</a>
+                    <a href="#">Return & Exchange</a>
+                    <a href="#">Size Guide</a>
+                    <a href="#">FAQ</a>
+                    <a href="#">Contact Us</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Company</h4>
+                    <a href="#">About Us</a>
+                    <a href="#">Our Story</a>
+                    <a href="#">Blog</a>
+                    <a href="#">Careers</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024 Naye Leithe. All rights reserved. Made with ❤️ in India.</p>
+                <div class="payment-icons">
+                    <img src="https://api.iconify.design/logos:visa.svg" style="height: 20px" alt="visa">
+                    <img src="https://api.iconify.design/logos:mastercard.svg" style="height: 20px" alt="mastercard">
+                    <img src="https://api.iconify.design/logos:google-pay.svg" style="height: 20px" alt="gpay">
+                    <img src="https://api.iconify.design/logos:apple-pay.svg" style="height: 20px" alt="applepay">
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <style>
+        .nav-auth-link {
+            padding: 8px 20px;
+            background: #fff;
+            border: 1.5px solid var(--crimson);
+            color: var(--crimson);
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .nav-auth-link:hover {
+            background: var(--crimson);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(139, 26, 42, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .admin-link img {
+            filter: drop-shadow(0 2px 4px rgba(139, 26, 42, 0.2));
+        }
+
+        .nav-icon-btn {
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .nav-icon-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .cat-group a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .cat-group a:hover {
+            color: var(--crimson);
+        }
+
+        /* Wishlist Active State */
+        .product-wishlist.active .icon-wishlist {
+            filter: none !important;
+            content: url("https://api.iconify.design/lucide:heart.svg?color=%23ffffff");
+            background: var(--crimson);
+            padding: 4px;
+            border-radius: 50%;
+        }
+
+        .wishlist-btn-large {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            border: 1.5px solid var(--sand);
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wishlist-btn-large.active {
+            background: var(--crimson);
+            border-color: var(--crimson);
+        }
+
+        .wishlist-btn-large.active img {
+            filter: brightness(0) invert(1);
+        }
+
+        .nav-links a i {
+            font-size: 11px;
+            vertical-align: middle;
+            margin-left: 4px;
+            color: var(--crimson);
+            transition: transform 0.3s;
+        }
+
+        .dropdown:hover .nav-links a i {
+            transform: rotate(180deg);
+        }
+
+        .hero-tag span {
+            color: var(--crimson);
+            font-size: 16px;
+        }
+    </style>
+
+    <script>
+        // Add to Cart AJAX
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.classList.contains('product-add-btn') || e.target.closest('.add-to-cart')) {
+                e.preventDefault();
+                const btn = e.target.classList.contains('product-add-btn') ? e.target : e.target.closest('.add-to-cart');
+                let productId = btn.getAttribute('data-id');
+
+                if (!productId) {
+                    const card = btn.closest('.product-card');
+                    if (card) {
+                        const link = card.querySelector('a');
+                        if (link) {
+                            const parts = link.getAttribute('href').split('/');
+                            productId = parts[parts.length - 1];
+                        }
+                    } else {
+                        productId = window.location.pathname.split('/').pop();
+                    }
+                }
+
+                if (productId) {
+                    fetch(`/add-to-cart/${productId}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                const badge = document.getElementById('cartBadge');
+                                if (badge) badge.innerText = data.cart_count;
+
+                                const originalText = btn.innerText;
+                                btn.innerText = 'Added!';
+                                btn.style.background = 'var(--gold)';
+                                btn.style.color = '#fff';
+                                btn.style.borderColor = 'var(--gold)';
+
+                                setTimeout(() => {
+                                    btn.innerText = originalText;
+                                    btn.style.background = '';
+                                    btn.style.color = '';
+                                    btn.style.borderColor = '';
+                                }, 1500);
+                            }
+                        });
+                }
+            }
+        });
+
+        const menuToggle = document.getElementById('menuToggle');
+        const navLinks = document.getElementById('navLinks');
+        const menuIcon = document.getElementById('menuIcon');
+
+        if (menuToggle) {
+            menuToggle.addEventListener('click', () => {
+                navLinks.classList.toggle('mobile-active');
+                if (navLinks.classList.contains('mobile-active')) {
+                    menuIcon.src = "https://api.iconify.design/lucide:x.svg?color=%238b1a2a";
+                } else {
+                    menuIcon.src = "https://api.iconify.design/lucide:menu.svg?color=%238b1a2a";
+                }
+            });
+        }
+
+        function toggleWishlist(e, productId, isLarge = false) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            fetch(`/toggle-wishlist/${productId}`, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const badge = document.getElementById('wishlistBadge');
+                        if (badge) badge.innerText = data.wishlist_count;
+
+                        // Update all icons for this product on the page
+                        const wishlistBtns = document.querySelectorAll(`.product-wishlist[onclick*="${productId}"]`);
+                        wishlistBtns.forEach(btn => {
+                            if (data.action === 'added') btn.classList.add('active');
+                            else btn.classList.remove('active');
+                        });
+
+                        if (isLarge) {
+                            const largeBtn = document.querySelector('.wishlist-btn-large');
+                            if (data.action === 'added') largeBtn.classList.add('active');
+                            else largeBtn.classList.remove('active');
+                        }
+                    }
+                });
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

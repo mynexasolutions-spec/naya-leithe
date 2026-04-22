@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login | Naye Leithe</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #fff5f7 0%, #fbe3e6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+        .login-card {
+            background: white;
+            padding: 3.5rem 3rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(199, 86, 106, 0.08);
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+            border: 1px solid rgba(199, 86, 106, 0.1);
+        }
+        .login-card h1 {
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            color: #2d1b1e;
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+        }
+        .login-card p {
+            color: #5a4b4e;
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+        }
+        .form-group {
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.6rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #2d1b1e;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #f1f1f1;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+            background: #fafafa;
+        }
+        .form-group input:focus {
+            border-color: #c7566a;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(199, 86, 106, 0.05);
+        }
+        .forgot-password {
+            display: block;
+            text-align: right;
+            margin-top: -1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: #c7566a;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 1.1rem;
+            background: #c7566a;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(199, 86, 106, 0.2);
+        }
+        .btn-login:hover {
+            background: #d88c9a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(199, 86, 106, 0.3);
+        }
+        .error-msg {
+            color: #ef4444;
+            background: #fff5f5;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            border: 1px solid #feb2b2;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <img src="/static/images/logo.png" alt="Logo" style="width: 80px; margin-bottom: 1.5rem;">
+        <h1>Admin Login</h1>
+        <p>Access your store dashboard</p>
+        
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="error-msg">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('admin_login') }}" method="POST">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="admin@nayeleithe.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            </div>
+            <a href="#" class="forgot-password">Forgot Password?</a>
+            <button type="submit" class="btn-login">Sign In</button>
+        </form>
+    </div>
+</body>
+</html>

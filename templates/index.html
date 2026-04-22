@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% macro section_header(title, on_scroll=None, view_all=None) %}
+<div class="section-header">
+    <h2 class="section-title">{{ title }}</h2>
+    <div class="section-nav">
+        {% if on_scroll %}
+        <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', -1)">
+            <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%238b1a2a" alt="prev">
+        </button>
+        <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', 1)">
+            <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%238b1a2a" alt="next">
+        </button>
+        {% endif %}
+        {% if view_all %}
+        <a href="{{ view_all }}" class="view-all-link">View All</a>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro product_card(product) %}
+<div class="product-card">
+    <div class="product-img-wrap">
+        <a href="/product/{{ product.id }}">
+            <img src="{{ product.img }}" alt="{{ product.name }}" loading="lazy">
+        </a>
+        {% if product.badge %}
+        <span class="product-badge {{ product.badge.lower() }}">
+            {{ product.badge }}
+        </span>
+        {% endif %}
+        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}" onclick="toggleWishlist(event, '{{ product.id }}')">
+            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist" alt="wishlist">
+        </div>
+    </div>
+    <div class="product-info">
+        <div class="product-category">
+            {{ product.category.name if product.category else product.cat_name }}
+            {% if product.subcategory %}
+            / {{ product.subcategory.name }}
+            {% endif %}
+        </div>
+        <div class="product-name">{{ product.name }}</div>
+        <div class="product-prices">
+            <span class="product-price">{{ product.price }}</span>
+            <span class="product-price-original">{{ product.orig }}</span>
+        </div>
+        <button class="product-add-btn">Add to Cart</button>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-bg-images">
+        <div class="hero-bg-strip"
+            style="background-image: url('https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=400&q=80')">
+        </div>
+        <div class="hero-bg-strip"
+            style="background-image: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=80')">
+        </div>
+    </div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <div class="hero-tag"><span>✦</span> Welcome to Naye Leithe</div>
+        <h1>Discover Your Signature Style</h1>
+        <div class="hero-btns">
+            <a href="#new-arrivals" class="btn-primary">Shop now</a>
+            <a href="#categories" class="btn-outline">View Collections</a>
+        </div>
+    </div>
+    <div class="hero-cards">
+        <a href="{{ url_for('public.shop', category='Ethnic Wear', subcategory='Sarees') }}" class="hero-card"
+            style="background-image: url('https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=500&q=80')">
+            <div class="hero-card-label">Sarees</div>
+        </a>
+        <a href="{{ url_for('public.shop', category='Western Wear') }}" class="hero-card"
+            style="background-image: url('https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=500&q=80')">
+            <div class="hero-card-label">Western</div>
+        </a>
+        <a href="{{ url_for('public.shop', category='Accessories', subcategory='Jewellery') }}" class="hero-card"
+            style="background-image: url('https://images.unsplash.com/photo-1617019114583-affb34d1b3cd?w=500&q=80')">
+            <div class="hero-card-label">Jewellery</div>
+        </a>
+        <a href="{{ url_for('public.shop', category='Accessories', subcategory='Bags & Purses') }}" class="hero-card"
+            style="background-image: url('https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80')">
+            <div class="hero-card-label">Bags</div>
+        </a>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section class="categories-section" id="categories">
+    {{ section_header("Top Categories", on_scroll="categories-track") }}
+    <div class="categories-scroll-wrapper">
+        <div class="categories-track fade-in" id="categories-track">
+            {% for cat in categories %}
+            <div class="cat-card" style="background: {{ cat.bg }}">
+                <img src="{{ cat.img }}" alt="{{ cat.name }}" loading="lazy">
+                <div class="cat-card-overlay">
+                    <div class="cat-card-name">{{ cat.name }}</div>
+                    <div class="cat-card-count">{{ cat.count }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- New Arrivals Carousel -->
+<section id="new-arrivals" style="background: var(--cream)">
+    {{ section_header("New Arrivals", on_scroll="new-arrivals-track") }}
+    <div class="scroll-carousel fade-in">
+        <div class="carousel-track" id="new-arrivals-track">
+            {% for prod in new_arrivals %}
+            {{ product_card(prod) }}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Promo Banner -->
+<div class="promo-banners fade-in">
+    <div class="promo-banner">
+        <div class="promo-banner-img">
+            <img src="/static/images/saree_1.jpg" alt="Ethnic Collection">
+        </div>
+        <div class="promo-banner-content">
+            <div class="promo-banner-tag">Ethnic Collection</div>
+            <h3>Bridal Lehenga Choli & Designer Sarees</h3>
+            <p>Handcrafted for every celebration. Explore our exclusive ethnic range.</p>
+            <button class="btn-white">Shop Ethnic</button>
+        </div>
+    </div>
+    <div class="promo-banner">
+        <div class="promo-banner-content">
+            <div class="promo-banner-tag">Western Trend</div>
+            <h3>Cord Sets, Dresses & Tops — New Season</h3>
+            <p>Fresh cuts and contemporary silhouettes for the modern woman.</p>
+            <button class="btn-white">Shop Western</button>
+        </div>
+        <div class="promo-banner-img">
+            <img src="/static/images/gown.jpg" alt="Western Trend">
+        </div>
+    </div>
+</div>
+
+<!-- Featured Products Grid -->
+<section class="featured-section" id="featured">
+    {{ section_header("Featured Products", view_all="#") }}
+    <div class="products-grid fade-in">
+        {% for prod in featured_products %}
+        {{ product_card(prod) }}
+        {% endfor %}
+    </div>
+</section>
+
+
+<!-- Why Choose Us -->
+<div class="why-us fade-in">
+    <div class="why-item">
+        <div class="why-icon"><img src="https://api.iconify.design/lucide:truck.svg?color=%238b1a2a"
+                alt="free shipping"></div>
+        <div class="why-title">Free Shipping</div>
+        <div class="why-desc">On all orders above ₹999. Pan-India delivery.</div>
+    </div>
+    <div class="why-item">
+        <div class="why-icon"><img src="https://api.iconify.design/lucide:rotate-ccw.svg?color=%238b1a2a"
+                alt="easy returns"></div>
+        <div class="why-title">Easy Returns</div>
+        <div class="why-desc">Hassle-free 7-day return policy on all products.</div>
+    </div>
+    <div class="why-item">
+        <div class="why-icon"><img src="https://api.iconify.design/lucide:lock.svg?color=%238b1a2a"
+                alt="secure payment"></div>
+        <div class="why-title">Secure Payment</div>
+        <div class="why-desc">100% secure payments via UPI, Cards & Wallets.</div>
+    </div>
+    <div class="why-item">
+        <div class="why-icon"><img src="https://api.iconify.design/lucide:gem.svg?color=%238b1a2a"
+                alt="premium quality"></div>
+        <div class="why-title">Premium Quality</div>
+        <div class="why-desc">Handpicked & quality-checked every single product.</div>
+    </div>
+</div>
+
+<!-- Testimonials -->
+<section class="testimonials-section">
+    {{ section_header("What Our Customers Say") }}
+    <div class="testimonials-grid fade-in">
+        <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★★</div>
+            <div class="testimonial-text">"Absolutely loved my silk saree from Naye Leithe! The quality is outstanding
+                and the colours are exactly as shown. Will definitely order again."</div>
+            <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop"
+                    class="testimonial-avatar" alt="avatar">
+                <div>
+                    <div class="testimonial-name">Priya Sharma</div>
+                    <div class="testimonial-loc">Mumbai, India</div>
+                </div>
+            </div>
+        </div>
+        <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★★</div>
+            <div class="testimonial-text">"The cord set I ordered was so elegant and the stitching is perfect. Got so
+                many compliments at the party! Fast delivery too."</div>
+            <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop"
+                    class="testimonial-avatar" alt="avatar">
+                <div>
+                    <div class="testimonial-name">Riya Mehta</div>
+                    <div class="testimonial-loc">Delhi, India</div>
+                </div>
+            </div>
+        </div>
+        <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★☆</div>
+            <div class="testimonial-text">"Beautiful jewellery set — the neck piece was perfect for my sister's wedding.
+                Packaging was also very classy."</div>
+            <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&q=80&fit=crop"
+                    class="testimonial-avatar" alt="avatar">
+                <div>
+                    <div class="testimonial-name">Anjali Gupta</div>
+                    <div class="testimonial-loc">Bangalore, India</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter -->
+<div class="newsletter fade-in">
+    <div class="nl-tag">Stay in Style</div>
+    <h2>Join the Naye Leithe Circle</h2>
+    <p>Get exclusive offers, early access to new arrivals, and style inspiration delivered to your inbox.</p>
+    <div class="nl-form">
+        <input type="email" placeholder="Enter your email address">
+        <button>Subscribe</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function scrollTrack(trackId, dir) {
+        const track = document.getElementById(trackId);
+        if (!track || !track.firstElementChild) return;
+
+        const gap = parseInt(window.getComputedStyle(track).gap) || 16;
+        const cardW = track.firstElementChild.offsetWidth + gap;
+        const containerW = track.parentElement.offsetWidth;
+        const max = track.scrollWidth - containerW;
+
+        let currentOffset = parseFloat(track.dataset.offset || 0);
+        currentOffset = Math.max(0, Math.min(max, currentOffset + dir * cardW)); // scroll one card at a time or two
+
+        track.style.transform = `translateX(-${currentOffset}px)`;
+        track.dataset.offset = currentOffset;
+    }
+
+    // Touch support for swiping
+    document.addEventListener('DOMContentLoaded', () => {
+        const tracks = document.querySelectorAll('.categories-track, .carousel-track');
+
+        tracks.forEach(track => {
+            let startX, currentX, initialOffset;
+            let isDown = false;
+
+            const handleStart = (e) => {
+                isDown = true;
+                startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                initialOffset = parseFloat(track.dataset.offset || 0);
+                track.style.transition = 'none';
+            };
+
+            const handleMove = (e) => {
+                if (!isDown) return;
+                currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                const diff = startX - currentX;
+                const containerW = track.parentElement.offsetWidth;
+                const max = track.scrollWidth - containerW;
+
+                let newOffset = initialOffset + diff;
+                newOffset = Math.max(0, Math.min(max, newOffset));
+
+                track.style.transform = `translateX(-${newOffset}px)`;
+                track.dataset.offset = newOffset;
+            };
+
+            const handleEnd = () => {
+                isDown = false;
+                track.style.transition = 'transform .4s cubic-bezier(.4, 0, .2, 1)';
+            };
+
+            track.addEventListener('touchstart', handleStart);
+            track.addEventListener('touchmove', handleMove);
+            track.addEventListener('touchend', handleEnd);
+
+            // Mouse support for desktop swiping too
+            track.addEventListener('mousedown', handleStart);
+            track.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', handleEnd);
+        });
+    });
+</script>
+{% endblock %}

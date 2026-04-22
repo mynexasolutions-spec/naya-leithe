@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-left">
+        <h1>Store Settings</h1>
+        <p>Manage your payment methods, shipping charges, and store configurations.</p>
+    </div>
+</div>
+
+<div class="settings-grid">
+    <div class="section-card">
+        <form action="{{ url_for('admin.settings') }}" method="POST">
+            <h2 class="section-title"><i class="fas fa-truck"></i> Shipping Configuration</h2>
+            <div class="form-group">
+                <label>Standard Shipping Charges</label>
+                <input type="text" name="shipping_charges" value="{{ configs.get('shipping_charges', '') }}" placeholder="e.g. ₹99">
+            </div>
+            <div class="form-group">
+                <label>Free Shipping Threshold</label>
+                <input type="text" name="free_shipping_above" value="{{ configs.get('free_shipping_above', '') }}" placeholder="e.g. ₹999">
+            </div>
+
+            <h2 class="section-title" style="margin-top: 2rem;"><i class="fas fa-credit-card"></i> Payment Methods</h2>
+            <div class="form-group">
+                <label>Enabled Payment Methods (Comma separated)</label>
+                <input type="text" name="payment_methods" value="{{ configs.get('payment_methods', '') }}" placeholder="COD, Razorpay, UPI">
+                <p class="form-hint">Separate each method with a comma.</p>
+            </div>
+
+            <h2 class="section-title" style="margin-top: 2rem;"><i class="fas fa-envelope"></i> Contact Information</h2>
+            <div class="form-group">
+                <label>Support Email Address</label>
+                <input type="email" name="contact_email" value="{{ configs.get('contact_email', '') }}" placeholder="support@nayeleithe.com">
+            </div>
+
+            <div class="form-actions" style="margin-top: 2rem;">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-sidebar">
+        <div class="section-card">
+            <h3>Quick Tips</h3>
+            <ul class="tips-list">
+                <li>Set "Standard Shipping Charges" to ₹0 for site-wide free shipping.</li>
+                <li>Make sure to save changes before navigating away.</li>
+                <li>Enabled payment methods will appear at checkout.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .settings-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+    }
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-main);
+    }
+    .section-title i {
+        color: var(--primary); /* Changed to Pink/Crimson */
+    }
+    .form-group {
+        margin-bottom: 1.2rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .form-group input {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        outline: none;
+        transition: border-color 0.3s;
+    }
+    .form-group input:focus {
+        border-color: var(--primary); /* Pink Focus */
+    }
+    .form-hint {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 0.3rem;
+    }
+    .tips-list {
+        margin-top: 1rem;
+        padding-left: 1.2rem;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+    .tips-list li {
+        margin-bottom: 0.8rem;
+    }
+</style>
+{% endblock %}

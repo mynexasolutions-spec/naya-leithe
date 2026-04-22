@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Add New SubCategory</h1>
+    <p>Create a nested subcategory under an existing parent category.</p>
+</div>
+
+<div class="section-card">
+    <form action="{{ url_for('admin.new_subcategory') }}" method="POST" class="admin-form">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Parent Category</label>
+                <select name="category_id" required>
+                    <option value="">Select Parent Category...</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>SubCategory Name</label>
+                <input type="text" name="name" placeholder="e.g. Jeans, Sarees, etc." required>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save SubCategory</button>
+            <a href="{{ url_for('admin.categories') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        outline: none;
+    }
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+    }
+    .btn-secondary {
+        background: #f1f5f9;
+        color: #1e293b;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

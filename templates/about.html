@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}About Us — The Story of Naye Leithe{% endblock %}
+
+{% block content %}
+<div class="about-page">
+    <section class="about-hero">
+        <div class="about-hero-content">
+            <div class="header-tag"><span>✦</span> Our Story</div>
+            <h1>Crafting Elegance, Preserving Heritage</h1>
+            <p>Naye Leithe was born from a passion for timeless Indian craftsmanship and the modern woman's desire for effortless style.</p>
+        </div>
+    </section>
+
+    <section class="about-grid">
+        <div class="about-text">
+            <h2 class="section-title">The Essence of Naye Leithe</h2>
+            <p>Founded with a vision to bridge the gap between traditional artistry and contemporary fashion, Naye Leithe is more than just a brand—it's a celebration of cultural identity.</p>
+            <p>Every thread, every weave, and every embellishment is a testament to the skill of our master artisans. We travel across the heartlands of India to bring you authentic fabrics and designs that resonate with the soul.</p>
+        </div>
+        <div class="about-img">
+            <img src="https://images.unsplash.com/photo-1590736704728-f4730bb30770?w=800&q=80" alt="Craftsmanship">
+        </div>
+    </section>
+
+    <section class="values-section">
+        <div class="value-card">
+            <div class="value-icon">✦</div>
+            <h3>Authenticity</h3>
+            <p>We source directly from weavers and craftsmen to ensure every piece is genuine and high-quality.</p>
+        </div>
+        <div class="value-card">
+            <div class="value-icon">✦</div>
+            <h3>Quality</h3>
+            <p>Every product undergoes a multi-level quality check before it reaches your doorstep.</p>
+        </div>
+        <div class="value-card">
+            <div class="value-icon">✦</div>
+            <h3>Design</h3>
+            <p>Our designs are a blend of vintage charm and modern sophistication, curated for every occasion.</p>
+        </div>
+    </section>
+
+    <section class="story-banner">
+        <div class="story-banner-content">
+            <h2>Experience the Naye Leithe Lifestyle</h2>
+            <p>Join thousands of women who have discovered their signature style with our curated collections.</p>
+            <a href="{{ url_for('public.shop') }}" class="btn-primary">Explore Collections</a>
+        </div>
+    </section>
+</div>
+
+<style>
+    .about-page { background: var(--warm-white); }
+    .about-hero {
+        height: 60vh;
+        background: linear-gradient(rgba(28, 28, 28, 0.4), rgba(28, 28, 28, 0.4)), url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&q=80');
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #fff;
+    }
+    .about-hero-content { max-width: 800px; padding: 20px; }
+    .about-hero h1 { font-family: 'Playfair Display', serif; font-size: 54px; margin-bottom: 20px; }
+    .about-hero p { font-size: 18px; opacity: 0.9; line-height: 1.6; }
+
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; padding: 100px 48px; align-items: center; }
+    .about-text h2 { margin-bottom: 30px; text-align: left; }
+    .about-text p { color: var(--muted); line-height: 1.8; margin-bottom: 20px; font-size: 16px; }
+    .about-img img { width: 100%; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+
+    .values-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; padding: 80px 48px; background: var(--cream); }
+    .value-card { text-align: center; padding: 40px; background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+    .value-icon { color: var(--crimson); font-size: 32px; margin-bottom: 20px; }
+    .value-card h3 { font-family: 'Playfair Display', serif; font-size: 24px; margin-bottom: 15px; }
+    .value-card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+    .story-banner { padding: 100px 48px; text-align: center; }
+    .story-banner-content { max-width: 700px; margin: 0 auto; }
+    .story-banner h2 { font-family: 'Playfair Display', serif; font-size: 42px; margin-bottom: 24px; }
+    .story-banner p { color: var(--muted); margin-bottom: 40px; font-size: 18px; }
+
+    @media (max-width: 900px) {
+        .about-grid { grid-template-columns: 1fr; gap: 40px; padding: 60px 20px; }
+        .about-hero h1 { font-size: 36px; }
+        .values-section { grid-template-columns: 1fr; padding: 60px 20px; }
+    }
+</style>
+{% endblock %}
