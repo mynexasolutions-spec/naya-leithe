@@ -44,7 +44,7 @@
                             </td>
                             <td>{{ item.product.price }}</td>
                             <td>
-                                <form action="{{ url_for('update_cart', id=item.product.id) }}" method="POST" class="qty-form">
+                                <form action="{{ url_for('cart.update_cart', id=item.id) }}" method="POST" class="qty-form">
                                     <div class="qty-control">
                                         <button type="submit" name="quantity" value="{{ item.quantity - 1 }}">-</button>
                                         <input type="number" name="quantity" value="{{ item.quantity }}" readonly>
@@ -54,7 +54,7 @@
                             </td>
                             <td class="item-total-cell">{{ item.item_total }}</td>
                             <td>
-                                <a href="{{ url_for('remove_from_cart', id=item.product.id) }}" class="remove-btn">
+                                <a href="{{ url_for('cart.remove_from_cart', id=item.id) }}" class="remove-btn">
                                     <img src="https://api.iconify.design/lucide:trash-2.svg?color=%238a7f78" alt="remove">
                                 </a>
                             </td>
