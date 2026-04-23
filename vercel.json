@@ -7,9 +7,13 @@
     },
     {
       "src": "app.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb"
+      }
     }
   ],
+  "outputDirectory": ".",
   "routes": [
     {
       "src": "/static/(.*)",
