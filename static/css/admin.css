@@ -555,6 +555,58 @@ tr:hover td {
     border: 1px solid var(--border-color);
 }
 
+/* Dropdown Links */
+.dropdown-content a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid transparent;
+}
+
+.dropdown-content a:hover {
+    background: var(--cream);
+    color: var(--primary);
+    padding-left: 24px;
+}
+
+.dropdown-content a i {
+    width: 18px;
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.dropdown-content a:hover i {
+    color: var(--primary);
+}
+
+.dropdown-content hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 4px 0;
+}
+
+.dropdown-content a.text-danger {
+    color: var(--error);
+}
+
+.dropdown-content a.text-danger i {
+    color: var(--error);
+}
+
+.dropdown-content a.text-danger:hover {
+    background: rgba(239, 68, 68, 0.05);
+    color: var(--error);
+    padding-left: 24px;
+}
+
 /* Invisible bridge to prevent dropdown from closing when moving mouse from trigger to menu */
 .admin-profile-dropdown::after,
 .notifications-dropdown::after {
