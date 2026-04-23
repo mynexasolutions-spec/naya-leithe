@@ -52,7 +52,7 @@ app.register_blueprint(admin_bp)
 with app.app_context():
     db.create_all()
     
-    # Ensure upload directories exist
+    # Ensure upload directories exist (skip on Vercel - read-only filesystem)
     upload_dirs = [
         app.config['UPLOAD_FOLDER'],
         os.path.join(app.config['UPLOAD_FOLDER'], 'products'),
@@ -60,8 +60,11 @@ with app.app_context():
         os.path.join(app.config['UPLOAD_FOLDER'], 'size_charts')
     ]
     for d in upload_dirs:
-        if not os.path.exists(d):
-            os.makedirs(d)
+        try:
+            if not os.path.exists(d):
+                os.makedirs(d)
+        except OSError:
+            pass  # Vercel serverless has read-only filesystem
             
     # Seed Admin
     admin_email = 'admin@nayeleithe.com'
