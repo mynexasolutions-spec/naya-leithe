@@ -3,26 +3,35 @@ from models import Product
 
 cart_bp = Blueprint('cart', __name__)
 
+def safe_price(price_str):
+    """Safely parse price string like '₹1,299' → 1299. Returns 0 on failure."""
+    try:
+        return int(str(price_str).replace('₹', '').replace(',', '').strip())
+    except (ValueError, AttributeError):
+        return 0
+
 @cart_bp.route('/cart')
 def view_cart():
     cart = session.get('cart', {})
     cart_items = []
     subtotal = 0
     for product_id, quantity in cart.items():
-        product = Product.query.get(product_id)
+        # Cart key may be "pid_size_color" — always look up by base ID
+        base_id = product_id.split('_')[0]
+        product = Product.query.get(base_id)
         if product:
-            price_val = int(product.price.replace('₹', '').replace(',', ''))
+            price_val = safe_price(product.price)
             item_total = price_val * quantity
             subtotal += item_total
-            
+
             # Extract variation info if stored in key (format: pid_size_color)
             size, color = None, None
             if '_' in product_id:
                 parts = product_id.split('_')
                 if len(parts) >= 3:
-                    size = parts[1]
-                    color = parts[2]
-            
+                    size = parts[1] if parts[1] != 'NA' else None
+                    color = parts[2] if parts[2] != 'NA' else None
+
             cart_items.append({
                 'id': product_id,
                 'product': product,
@@ -32,6 +41,7 @@ def view_cart():
                 'color': color
             })
     return render_template('cart.html', cart_items=cart_items, subtotal=f"₹{subtotal:,}")
+
 
 @cart_bp.route('/add-to-cart/<id>', methods=['POST'])
 def add_to_cart(id):
@@ -78,15 +88,16 @@ def update_cart(id):
         # Resolve product from key
         base_id = id.split('_')[0]
         product = Product.query.get(base_id)
-        
-        price_val = int(product.price.replace('₹', '').replace(',', ''))
+
+        price_val = safe_price(product.price) if product else 0
         item_total = price_val * quantity
+
         total = 0
         for pid, qty in cart.items():
             base_pid = pid.split('_')[0]
             p = Product.query.get(base_pid)
             if p:
-                total += int(p.price.replace('₹', '').replace(',', '')) * qty
+                total += safe_price(p.price) * qty
         return jsonify({
             'success': True, 
             'cart_count': sum(cart.values()),
