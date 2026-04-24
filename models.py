@@ -47,6 +47,7 @@ class Product(db.Model):
     cat_name = db.Column(db.String(100))
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
     sub_category_id = db.Column(db.Integer, db.ForeignKey('sub_category.id'), nullable=True)
+    brand_id = db.Column(db.Integer, db.ForeignKey('brand.id'), nullable=True)
     price = db.Column(db.String(20), nullable=False)
     orig = db.Column(db.String(20))
     badge = db.Column(db.String(50))
@@ -60,6 +61,7 @@ class Product(db.Model):
     is_featured = db.Column(db.Boolean, default=False)
     
     variations = db.relationship('ProductVariation', backref='product', lazy=True, cascade="all, delete-orphan")
+    attributes = db.relationship('ProductAttribute', backref='product', lazy=True, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Product {self.name}>"
@@ -76,13 +78,12 @@ class SubCategory(db.Model):
 class ProductVariation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=False)
-    size = db.Column(db.String(50))
-    color = db.Column(db.String(50))
     price = db.Column(db.String(20))
     stock_status = db.Column(db.String(20), default='instock')
 
     def __repr__(self):
-        return f"<Variation {self.size}/{self.color} for {self.product_id}>"
+        return f"<Variation for {self.product_id}>"
+
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -105,3 +106,45 @@ class AppConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False)
     value = db.Column(db.Text, nullable=False)
+
+class Attribute(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    slug = db.Column(db.String(100), unique=True)
+    type = db.Column(db.String(50), default='select') # 'text', 'select', 'color'
+
+    def __repr__(self):
+        return f"<Attribute {self.name}>"
+
+
+class AttributeValue(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    attribute_id = db.Column(db.Integer, db.ForeignKey('attribute.id'), nullable=False)
+    value = db.Column(db.String(100), nullable=False)
+    attribute = db.relationship('Attribute', backref=db.backref('values', lazy=True, cascade="all, delete-orphan"))
+
+    def __repr__(self):
+        return f"<AttributeValue {self.value} for {self.attribute.name}>"
+
+class ProductAttribute(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=False)
+    attribute_id = db.Column(db.Integer, db.ForeignKey('attribute.id'), nullable=False)
+    attribute = db.relationship('Attribute')
+
+class VariationOption(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    variation_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=False)
+    attribute_value_id = db.Column(db.Integer, db.ForeignKey('attribute_value.id'), nullable=False)
+    variation = db.relationship('ProductVariation', backref=db.backref('options', lazy=True, cascade="all, delete-orphan"))
+    attribute_value = db.relationship('AttributeValue')
+
+class Brand(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    logo = db.Column(db.String(512))
+    products = db.relationship('Product', backref='brand', lazy=True)
+
+    def __repr__(self):
+        return f"<Brand {self.name}>"
+

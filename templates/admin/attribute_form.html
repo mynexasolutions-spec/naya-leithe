@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit' if attribute else 'New' }} Attribute – StoreAdmin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:2rem;">
+  <div style="display:flex; align-items:center; gap:0.5rem; color:var(--admin-text-muted); font-size:0.875rem; margin-bottom:1rem;">
+    <a href="{{ url_for('admin.admin_attributes') }}" style="color:var(--admin-primary);">Attributes</a>
+    <span>/</span>
+    <span>{{ 'Edit' if attribute else 'New' }} Attribute</span>
+  </div>
+  <h1 style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main);">{{ 'Edit' if attribute else 'Create' }} Product Attribute</h1>
+  <p style="color:var(--admin-text-muted); font-size:0.875rem;">Define a property that products can vary by.</p>
+</div>
+
+<form method="post" class="admin-card" style="padding:2.5rem; max-width:600px;">
+  <div style="margin-bottom:1.5rem;">
+    <label class="admin-label">Attribute Name *</label>
+    <input type="text" name="name" value="{{ attribute.name if attribute }}" required placeholder="e.g. Power (SPH) or Color" class="admin-input" />
+  </div>
+
+  <div style="margin-bottom:2rem;">
+    <label class="admin-label">Slug</label>
+    <input type="text" name="slug" value="{{ attribute.slug if attribute }}" placeholder="e.g. power-sph" class="admin-input" />
+    <span style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.4rem; display:block;">Unique identifier used in URLs. Leave blank to auto-generate.</span>
+  </div>
+
+
+
+
+  <div style="display:flex; gap:1rem; padding-top:1.5rem; border-top:1px solid var(--admin-border);">
+    <button type="submit" class="admin-btn btn-primary" style="padding:0.75rem 2rem;">{{ 'Update' if attribute else 'Create' }} Attribute</button>
+    <a href="{{ url_for('admin.admin_attributes') }}" class="admin-btn btn-outline" style="padding:0.75rem 1.5rem;">Cancel</a>
+  </div>
+</form>
+
+{% block scripts %}
+<script>
+  document.querySelector('[name="name"]').addEventListener('input', function() {
+    const slugInput = document.querySelector('[name="slug"]');
+    if (!slugInput.value || slugInput.dataset.auto !== 'false') {
+      slugInput.value = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      slugInput.dataset.auto = 'true';
+    }
+  });
+  document.querySelector('[name="slug"]').addEventListener('input', function() {
+    this.dataset.auto = 'false';
+  });
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ attribute.name }} Values – StoreAdmin{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:2rem;">
+  <div style="display:flex; align-items:center; gap:0.5rem; color:var(--admin-text-muted); font-size:0.875rem; margin-bottom:1rem;">
+    <a href="{{ url_for('admin.admin_attributes') }}" style="color:var(--admin-primary);">Attributes</a>
+    <span>/</span>
+    <span>{{ attribute.name }}</span>
+  </div>
+  <h1 style="font-size:1.5rem; font-weight:700; color:var(--admin-text-main);">Manage Values: {{ attribute.name }}</h1>
+  <p style="color:var(--admin-text-muted); font-size:0.875rem;">Add or remove possible values for this attribute.</p>
+</div>
+
+<div class="admin-grid-order" style="display: grid; grid-template-columns: 1fr 2fr; gap:2rem;">
+  
+  <!-- Add Value Form -->
+  <div class="admin-card">
+    <h3 style="font-size:1rem; font-weight:700; margin-bottom:1.5rem;">Add New Value</h3>
+    <form method="post">
+      <div style="margin-bottom:1.5rem;">
+        <label class="admin-label">Value Content *</label>
+        <input type="text" name="value" required placeholder="e.g. -0.50 or Red" class="admin-input" />
+      </div>
+      <button type="submit" class="admin-btn btn-primary" style="width:100%; justify-content:center;">Add Value</button>
+    </form>
+  </div>
+
+  <!-- Values List -->
+  <div class="admin-table-container">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in values %}
+        <tr>
+          <td style="font-weight:600;">{{ v.value }}</td>
+          <td style="text-align:right;">
+            <form action="{{ url_for('admin.admin_attribute_value_delete', val_id=v.id) }}" method="post" onsubmit="return confirm('Remove this value?')">
+              <button type="submit" class="admin-btn" style="padding:0.375rem 0.75rem; font-size:0.8125rem; color:#ef4444; background:rgba(239,68,68,0.05);">Remove</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="2" style="text-align:center; padding:3rem; color:var(--admin-text-muted);">No values added yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

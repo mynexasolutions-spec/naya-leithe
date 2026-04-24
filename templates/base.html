@@ -24,7 +24,10 @@
 
         <!-- Navbar -->
         <nav>
-            <div class="nav-logo">Naye Leithe</div>
+            <a href="{{ url_for('public.home') }}" class="nav-logo-link">
+                <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="Naye Leithe" class="logo-img">
+                <div class="nav-logo">Naye Leithe</div>
+            </a>
             <div class="nav-links" id="navLinks">
                 <a href="{{ url_for('public.home') }}"
                     class="{% if request.endpoint == 'public.home' %}active{% endif %}">Home</a>
@@ -55,10 +58,7 @@
                         alt="search">
                     <input type="text" placeholder="Search Products">
                 </div>
-                <a class="nav-icon-btn" href="{{ url_for('public.wishlist') }}">
-                    <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
-                    <span class="badge" id="wishlistBadge">{{ wishlist_count }}</span>
-                </a>
+
 
                 {% if session.get('user_id') %}
                 {% if session.get('is_admin') %}
@@ -72,6 +72,11 @@
                 {% else %}
                 <a href="{{ url_for('auth.login') }}" class="nav-auth-link">Login / Signup</a>
                 {% endif %}
+
+                <a class="nav-icon-btn" href="{{ url_for('public.wishlist') }}">
+                    <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
+                    <span class="badge" id="wishlistBadge">{{ wishlist_count }}</span>
+                </a>
 
                 <a class="nav-icon-btn" href="{{ url_for('cart.view_cart') }}">
                     <img src="https://api.iconify.design/lucide:shopping-bag.svg?color=%232d2d2d" alt="cart">
@@ -92,7 +97,9 @@
         <footer>
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <span class="nav-logo">Naye Leithe</span>
+                    <a href="{{ url_for('public.home') }}" style="text-decoration: none;">
+                        <span class="nav-logo">Naye Leithe</span>
+                    </a>
                     <p>Your destination for authentic ethnic and contemporary fashion. Every piece tells a story of
                         craftsmanship and elegance.</p>
                     <div class="footer-social">

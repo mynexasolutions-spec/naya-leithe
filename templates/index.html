@@ -2,18 +2,24 @@
 
 {% macro section_header(title, on_scroll=None, view_all=None) %}
 <div class="section-header">
-    <h2 class="section-title">{{ title }}</h2>
-    <div class="section-nav">
+    <div class="section-nav-mobile">
         {% if on_scroll %}
         <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', -1)">
             <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%238b1a2a" alt="prev">
         </button>
+        {% endif %}
+    </div>
+    <div class="section-center">
+        <h2 class="section-title">{{ title }}</h2>
+        {% if view_all %}
+        <a href="{{ view_all }}" class="view-all-link">View All</a>
+        {% endif %}
+    </div>
+    <div class="section-nav-mobile">
+        {% if on_scroll %}
         <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', 1)">
             <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%238b1a2a" alt="next">
         </button>
-        {% endif %}
-        {% if view_all %}
-        <a href="{{ view_all }}" class="view-all-link">View All</a>
         {% endif %}
     </div>
 </div>
@@ -30,8 +36,10 @@
             {{ product.badge }}
         </span>
         {% endif %}
-        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}" onclick="toggleWishlist(event, '{{ product.id }}')">
-            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist" alt="wishlist">
+        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}"
+            onclick="toggleWishlist(event, '{{ product.id }}')">
+            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist"
+                alt="wishlist">
         </div>
     </div>
     <div class="product-info">
@@ -306,6 +314,88 @@
             track.addEventListener('mousemove', handleMove);
             window.addEventListener('mouseup', handleEnd);
         });
+
+        // Seamless Infinite Scroll function (Marquee)
+        function setupContinuousScroll(selector, speed = 1) {
+            const track = document.querySelector(selector);
+            if (!track || !track.children.length) return;
+
+            if (track.dataset.cloned) return;
+            track.dataset.cloned = "true";
+
+            const container = track.parentElement;
+            const containerWidth = container.offsetWidth;
+            const originalItems = Array.from(track.children);
+            
+            // Only clone if we have items to clone
+            if (originalItems.length === 0) return;
+
+            // Clone items until we have enough to cover at least 2x the container width
+            // Added safety limit to prevent infinite loops
+            let safetyLimit = 0;
+            while (track.scrollWidth < containerWidth * 2 && safetyLimit < 10) {
+                originalItems.forEach(item => {
+                    const clone = item.cloneNode(true);
+                    clone.classList.add('is-clone');
+                    track.appendChild(clone);
+                });
+                safetyLimit++;
+                // Break if scrollWidth isn't increasing (e.g. elements are hidden)
+                if (track.scrollWidth === 0) break;
+            }
+
+            let scrollPos = 0;
+            function step() {
+                scrollPos += speed;
+                const totalWidth = track.scrollWidth;
+                const itemWidth = totalWidth / track.children.length;
+                const originalWidth = originalItems.length * itemWidth;
+                
+                if (scrollPos >= originalWidth) {
+                    scrollPos -= originalWidth;
+                }
+                
+                // Use scrollLeft on the parent if it's the scrollable container
+                if (container.classList.contains('hero-cards') || container.classList.contains('categories-scroll-wrapper')) {
+                    container.scrollLeft = scrollPos;
+                } else {
+                    track.scrollLeft = scrollPos;
+                }
+                requestAnimationFrame(step);
+            }
+            step();
+        }
+
+        const isMobile = window.innerWidth <= 768;
+        const catSpeed = isMobile ? 1.8 : 0.8;
+        setupContinuousScroll('.categories-track', catSpeed);
+
+        // Auto-sliding for other tracks (New Arrivals, Testimonials, Banners)
+        function setupAutoSlide(selector, interval = 4000) {
+            const track = document.querySelector(selector);
+            if (!track || selector === '.hero-cards' || selector === '.categories-track') return;
+
+            setInterval(() => {
+                const maxScroll = track.scrollWidth - track.clientWidth;
+                if (maxScroll <= 0) return;
+
+                const firstChild = track.firstElementChild;
+                const gap = parseInt(window.getComputedStyle(track).gap) || 0;
+                const scrollStep = firstChild.offsetWidth + gap;
+
+                let newScroll = track.scrollLeft + scrollStep;
+                
+                if (newScroll >= maxScroll + 10) {
+                    track.scrollTo({ left: 0, behavior: 'smooth' });
+                } else {
+                    track.scrollTo({ left: newScroll, behavior: 'smooth' });
+                }
+            }, interval);
+        }
+
+        setupAutoSlide('.carousel-track', 5000);
+        setupAutoSlide('.testimonials-grid', isMobile ? 2000 : 6000);
+        setupAutoSlide('.promo-banners', isMobile ? 2500 : 5500);
     });
 </script>
 {% endblock %}

@@ -3,21 +3,25 @@
 {% block content %}
 <div class="page-header">
     <h1>{{ 'Edit Product' if product else 'Add New Product' }}</h1>
-    <p>{{ 'Update the details of your product listing.' if product else 'Create a new product listing in your store.' }}</p>
+    <p>{{ 'Update the details of your product listing.' if product else 'Create a new product listing in your store.' }}
+    </p>
 </div>
 
 <div class="section-card">
-    <form action="{{ url_for('admin.edit_product', id=product.id) if product else url_for('admin.new_product') }}" method="POST" enctype="multipart/form-data" class="admin-form">
+    <form action="{{ url_for('admin.edit_product', id=product.id) if product else url_for('admin.new_product') }}"
+        method="POST" enctype="multipart/form-data" class="admin-form">
         <div class="form-grid">
             <div class="form-group">
                 <label>Product Name</label>
-                <input type="text" name="name" value="{{ product.name if product }}" placeholder="e.g. Floral Silk Saree" required>
+                <input type="text" name="name" value="{{ product.name if product }}"
+                    placeholder="e.g. Floral Silk Saree" required>
             </div>
             <div class="form-group">
                 <label>Price</label>
                 <div class="input-with-prefix">
                     <span class="prefix">₹</span>
-                    <input type="text" name="price" value="{{ product.price.replace('₹', '') if product }}" placeholder="2,499" required>
+                    <input type="text" name="price" value="{{ product.price.replace('₹', '') if product }}"
+                        placeholder="2,499" required>
                 </div>
             </div>
             <div class="form-group">
@@ -25,7 +29,8 @@
                 <select name="category_id" id="categorySelect" onchange="filterSubcategories()" required>
                     <option value="">Select Category...</option>
                     {% for cat in categories %}
-                    <option value="{{ cat.id }}" {{ 'selected' if product and product.category_id == cat.id }}>{{ cat.name }}</option>
+                    <option value="{{ cat.id }}" {{ 'selected' if product and product.category_id==cat.id }}>{{ cat.name
+                        }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -34,65 +39,86 @@
                 <select name="sub_category_id" id="subCategorySelect">
                     <option value="">Select SubCategory...</option>
                     {% for sub in subcategories %}
-                    <option value="{{ sub.id }}" data-category="{{ sub.category_id }}" {{ 'selected' if product and product.sub_category_id == sub.id }}>{{ sub.name }}</option>
+                    <option value="{{ sub.id }}" data-category="{{ sub.category_id }}" {{ 'selected' if product and
+                        product.sub_category_id==sub.id }}>{{ sub.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Brand</label>
+                <select name="brand_id">
+                    <option value="">Select Brand...</option>
+                    {% for brand in brands %}
+                    <option value="{{ brand.id }}" {{ 'selected' if product and product.brand_id == brand.id }}>{{ brand.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
                 <label>Badge (Optional)</label>
-                <input type="text" name="badge" value="{{ product.badge if product }}" placeholder="New, Trending, etc.">
+                <input type="text" name="badge" value="{{ product.badge if product }}"
+                    placeholder="New, Trending, etc.">
             </div>
             <div class="form-group">
                 <label>Product Type</label>
                 <select name="product_type" id="productType" onchange="toggleVariations()">
-                    <option value="simple" {{ 'selected' if product and product.product_type == 'simple' }}>Simple Product</option>
-                    <option value="variable" {{ 'selected' if product and product.product_type == 'variable' }}>Variable Product</option>
+                    <option value="simple" {{ 'selected' if product and product.product_type=='simple' }}>Simple Product
+                    </option>
+                    <option value="variable" {{ 'selected' if product and product.product_type=='variable' }}>Variable
+                        Product</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Stock Status</label>
                 <select name="stock_status">
-                    <option value="instock" {{ 'selected' if product and product.stock_status == 'instock' }}>In Stock</option>
-                    <option value="outofstock" {{ 'selected' if product and product.stock_status == 'outofstock' }}>Out of Stock</option>
+                    <option value="instock" {{ 'selected' if product and product.stock_status=='instock' }}>In Stock
+                    </option>
+                    <option value="outofstock" {{ 'selected' if product and product.stock_status=='outofstock' }}>Out of
+                        Stock</option>
                 </select>
             </div>
             <div class="form-group featured-toggle">
                 <label class="checkbox-container">
-                    <input type="checkbox" name="is_featured" value="on" {{ 'checked' if product and product.is_featured }}>
+                    <input type="checkbox" name="is_featured" value="on" {{ 'checked' if product and product.is_featured
+                        }}>
                     <span class="checkmark"></span>
                     Feature on Homepage
                 </label>
                 <p class="form-hint">Highlight this product in the 'Featured Products' section.</p>
             </div>
-            
-            <div class="form-group">
-                <label>Available Sizes</label>
-                <div class="size-input-container">
-                    <select id="sizePresets" onchange="applyPreset(this, 'sizeInput')">
-                        <option value="">Select Preset Sizes...</option>
-                        <option value="XS, S, M, L, XL, XXL">Standard Clothing (XS-XXL)</option>
-                        <option value="S, M, L, XL">Standard Clothing (S-XL)</option>
-                        <option value="6, 7, 8, 9, 10, 11">Footwear (UK/Ind 6-11)</option>
-                        <option value="Free Size">Free Size</option>
-                        <option value="custom">Custom (Enter below)</option>
-                    </select>
-                    <input type="text" id="sizeInput" name="sizes" value="{{ product.sizes if product }}" placeholder="e.g. S, M, L">
+
+            <!-- ATTRIBUTE SELECTION -->
+            <div id="attributeSelectionSection" class="form-group full-width" style="display: {{ 'block' if product and product.product_type == 'variable' else 'none' }};">
+                <label>Select Product Attributes</label>
+                <p class="form-hint" style="margin-bottom: 1rem;">Choose which attributes (e.g. Size, Color, Fabric) apply to this product.</p>
+                <div class="attributes-selection-grid">
+                    {% for attr in attributes %}
+                    <div class="attr-selection-row-container" style="margin-bottom: 1.5rem; border: 1px solid #f1f5f9; padding: 1rem; border-radius: 12px;">
+                        <div class="attr-selection-row" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                            <label class="attr-checkbox-item" style="display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                                <input type="checkbox" name="product_attributes[]" value="{{ attr.id }}" 
+                                    {% if product and attr.id in product.attributes|map(attribute='attribute_id') %}checked{% endif %}
+                                    onchange="toggleAttrValues({{ attr.id }})">
+                                <span class="attr-name">{{ attr.name }}</span>
+                            </label>
+                            <div class="quick-add-value">
+                                <input type="text" id="quick_add_{{ attr.id }}" placeholder="New {{ attr.name }}...">
+                                <button type="button" onclick="quickAddValue({{ attr.id }})">Add</button>
+                            </div>
+                        </div>
+                        
+                        <div id="attr_values_{{ attr.id }}" class="attr-values-grid" style="display: {{ 'flex' if product and attr.id in product.attributes|map(attribute='attribute_id') else 'none' }}; flex-wrap: wrap; gap: 15px; padding: 10px; background: #fcfcfc; border-radius: 8px; margin-top: 10px;">
+                            {% for val in attr.values %}
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; background: white; border: 1px solid #edf2f7; border-radius: 20px; transition: all 0.2s;">
+                                <input type="checkbox" name="attr_val_{{ attr.id }}[]" value="{{ val.id }}"
+                                    style="width: 16px; height: 16px;"
+                                    {% if product and val.id in product.variations|map(attribute='options')|sum(start=[])|map(attribute='attribute_value_id') %}checked{% endif %}>
+                                <span style="font-weight: 500;">{{ val.value }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
-                <p class="form-hint">Comma separated sizes.</p>
-            </div>
-            <div class="form-group">
-                <label>Available Colors</label>
-                <div class="size-input-container">
-                    <select id="colorPresets" onchange="applyPreset(this, 'colorInput')">
-                        <option value="">Select Common Colors...</option>
-                        <option value="Red, Blue, Black, White">Primary Colors</option>
-                        <option value="Beige, Cream, Gold, Silver">Elegance Palette</option>
-                        <option value="Pink, Peach, Lavender">Pastel Tones</option>
-                        <option value="custom">Custom (Enter below)</option>
-                    </select>
-                    <input type="text" id="colorInput" name="colors" value="{{ product.colors if product }}" placeholder="e.g. Red, Blue, Green">
-                </div>
-                <p class="form-hint">Comma separated colors.</p>
             </div>
 
             <div class="form-group">
@@ -119,37 +145,62 @@
             </div>
             <div class="form-group full-width">
                 <label>Description</label>
-                <textarea name="desc" rows="4" placeholder="Describe your product...">{{ product.desc if product }}</textarea>
+                <textarea name="desc" rows="4"
+                    placeholder="Describe your product...">{{ product.desc if product }}</textarea>
             </div>
         </div>
 
-        <div id="variationsSection" style="display: {{ 'block' if product and product.product_type == 'variable' else 'none' }}; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 2rem;">
+        <div id="variationsSection"
+            style="display: {{ 'block' if product and product.product_type == 'variable' else 'none' }}; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 2rem;">
             <h3>Product Variations</h3>
-            <p class="form-hint" style="margin-bottom: 1.5rem;">Define specific combinations of size, color, and their stock status.</p>
-            
+            <p class="form-hint" style="margin-bottom: 1.5rem;">Define specific combinations of selected attributes and their price/stock.</p>
+
             <div id="variationsList" class="variations-grid">
                 {% if product and product.variations %}
-                    {% for var in product.variations %}
-                    <div class="variation-item card">
-                        <div class="var-header">
-                            <span>Variation #{{ loop.index }}</span>
-                            <button type="button" class="btn-remove" onclick="this.closest('.variation-item').remove()">&times;</button>
+                {% for var in product.variations %}
+                <div class="variation-item card">
+                    <div class="var-header">
+                        <span>Variation #{{ loop.index }}</span>
+                        <button type="button" class="btn-remove"
+                            onclick="this.closest('.variation-item').remove()">&times;</button>
+                    </div>
+                    <div class="var-body">
+                        {% for p_attr in product.attributes %}
+                        <div class="var-attr-select">
+                            <label>{{ p_attr.attribute.name }}</label>
+                            <select name="var_attr_{{ p_attr.attribute.id }}[]">
+                                {% for val in p_attr.attribute.values %}
+                                <option value="{{ val.id }}" 
+                                    {% if var.id in var.options|map(attribute='variation_id') %}
+                                        {% for opt in var.options if opt.attribute_value.attribute_id == p_attr.attribute.id %}
+                                            {% if opt.attribute_value_id == val.id %}selected{% endif %}
+                                        {% endfor %}
+                                    {% endif %}>
+                                    {{ val.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="var-body">
-                            <input type="text" name="var_size[]" value="{{ var.size }}" placeholder="Size">
-                            <input type="text" name="var_color[]" value="{{ var.color }}" placeholder="Color">
+                        {% endfor %}
+                        <div class="var-price-input">
+                            <label>Price</label>
                             <input type="text" name="var_price[]" value="{{ var.price or '' }}" placeholder="Price (Optional)">
+                        </div>
+                        <div class="var-stock-select">
+                            <label>Stock</label>
                             <select name="var_stock[]">
-                                <option value="instock" {{ 'selected' if var.stock_status == 'instock' }}>In Stock</option>
-                                <option value="outofstock" {{ 'selected' if var.stock_status == 'outofstock' }}>Out of Stock</option>
+                                <option value="instock" {{ 'selected' if var.stock_status=='instock' }}>In Stock</option>
+                                <option value="outofstock" {{ 'selected' if var.stock_status=='outofstock' }}>Out of Stock</option>
                             </select>
                         </div>
                     </div>
-                    {% endfor %}
+                </div>
+                {% endfor %}
                 {% endif %}
             </div>
-            
-            <button type="button" class="btn btn-secondary" style="margin-top: 1rem;" onclick="addVariation()">+ Add Variation</button>
+
+            <button type="button" class="btn btn-secondary" style="margin-top: 1rem;" onclick="addVariation()">+ Add
+                Variation</button>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">{{ 'Update Product' if product else 'Save Product' }}</button>
@@ -159,6 +210,20 @@
 </div>
 
 <script>
+    // Store attributes and their values for JS
+    const allAttributes = {
+        {% for attr in attributes %}
+        "{{ attr.id }}": {
+            "name": "{{ attr.name }}",
+            "values": [
+                {% for val in attr.values %}
+                {"id": "{{ val.id }}", "value": "{{ val.value }}"},
+                {% endfor %}
+            ]
+        },
+        {% endfor %}
+    };
+
     function applyPreset(select, inputId) {
         const input = document.getElementById(inputId);
         if (select.value && select.value !== 'custom') {
@@ -171,36 +236,133 @@
 
     function toggleVariations() {
         const type = document.getElementById('productType').value;
-        const section = document.getElementById('variationsSection');
-        section.style.display = type === 'variable' ? 'block' : 'none';
+        const varSection = document.getElementById('variationsSection');
+        const attrSection = document.getElementById('attributeSelectionSection');
+        
+        if (type === 'variable') {
+            varSection.style.display = 'block';
+            attrSection.style.display = 'block';
+        } else {
+            varSection.style.display = 'none';
+            attrSection.style.display = 'none';
+        }
+    }
+
+    function toggleAttrValues(attrId) {
+        const grid = document.getElementById(`attr_values_${attrId}`);
+        const checkbox = document.querySelector(`input[name="product_attributes[]"][value="${attrId}"]`);
+        grid.style.display = checkbox.checked ? 'flex' : 'none';
+        updateVariationFields();
+    }
+
+    function updateVariationFields() {
+        // If we add/remove attributes, we might want to refresh existing variations
+        // But for now, we'll let the user manage it.
     }
 
     function addVariation() {
+        const selectedAttrIds = Array.from(document.querySelectorAll('input[name="product_attributes[]"]:checked'))
+            .map(cb => cb.value);
+        
+        if (selectedAttrIds.length === 0) {
+            alert("Please select at least one attribute first.");
+            return;
+        }
+
         const list = document.getElementById('variationsList');
         const div = document.createElement('div');
         div.className = 'variation-item card';
+        
+        let attrHtml = '';
+        selectedAttrIds.forEach(id => {
+            const attr = allAttributes[id];
+            let optionsHtml = '';
+            const checkedValues = Array.from(document.querySelectorAll(`input[name="attr_val_${id}[]"]:checked`))
+                .map(cb => cb.value);
+            
+            attr.values.forEach(val => {
+                if (checkedValues.includes(val.id.toString())) {
+                    optionsHtml += `<option value="${val.id}">${val.value}</option>`;
+                }
+            });
+            
+            attrHtml += `
+                <div class="var-attr-select">
+                    <label>${attr.name}</label>
+                    <select name="var_attr_${id}[]">
+                        ${optionsHtml}
+                    </select>
+                </div>
+            `;
+        });
+
         div.innerHTML = `
             <div class="var-header">
                 <span>New Variation</span>
                 <button type="button" class="btn-remove" onclick="this.closest('.variation-item').remove()">&times;</button>
             </div>
             <div class="var-body">
-                <input type="text" name="var_size[]" placeholder="Size">
-                <input type="text" name="var_color[]" placeholder="Color">
-                <input type="text" name="var_price[]" placeholder="Price (Optional)">
-                <select name="var_stock[]">
-                    <option value="instock">In Stock</option>
-                    <option value="outofstock">Out of Stock</option>
-                </select>
+                ${attrHtml}
+                <div class="var-price-input">
+                    <label>Price</label>
+                    <input type="text" name="var_price[]" placeholder="Price (Optional)">
+                </div>
+                <div class="var-stock-select">
+                    <label>Stock</label>
+                    <select name="var_stock[]">
+                        <option value="instock">In Stock</option>
+                        <option value="outofstock">Out of Stock</option>
+                    </select>
+                </div>
             </div>
         `;
         list.appendChild(div);
     }
+
+    async function quickAddValue(attrId) {
+        const input = document.getElementById(`quick_add_${attrId}`);
+        const value = input.value.trim();
+        if (!value) return;
+
+        try {
+            const response = await fetch(`/admin/attribute/${attrId}/value/quick-add`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: value })
+            });
+            const data = await response.json();
+            if (data.success) {
+                if (data.existed) {
+                    // Check the existing one if found
+                    const existingCb = document.querySelector(`input[name="attr_val_${attrId}[]"][value="${data.id}"]`);
+                    if (existingCb) existingCb.checked = true;
+                } else {
+                    // Update local data
+                    allAttributes[attrId].values.push({id: data.id, value: value});
+                    
+                    // Add to UI
+                    const grid = document.getElementById(`attr_values_${attrId}`);
+                    const newLabel = document.createElement('label');
+                    newLabel.style = "display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; background: white; border: 1px solid #edf2f7; border-radius: 20px; transition: all 0.2s;";
+                    newLabel.innerHTML = `<input type="checkbox" name="attr_val_${attrId}[]" value="${data.id}" checked style="width: 16px; height: 16px;"> <span style="font-weight: 500;">${value}</span>`;
+                    grid.appendChild(newLabel);
+                }
+                
+                input.value = '';
+            } else {
+                alert("Error: " + data.error);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Failed to add value.");
+        }
+    }
+
     function filterSubcategories() {
         const catId = document.getElementById('categorySelect').value;
         const subSelect = document.getElementById('subCategorySelect');
         const options = subSelect.querySelectorAll('option');
-        
+
         subSelect.value = "";
         options.forEach(opt => {
             if (opt.value === "") {
@@ -216,15 +378,13 @@
         });
     }
 
-    // Run on load to set initial state
     document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('categorySelect').value) {
-            // If editing, don't reset value, just filter display
             const catId = document.getElementById('categorySelect').value;
             const subSelect = document.getElementById('subCategorySelect');
             const options = subSelect.querySelectorAll('option');
             const currentSubId = "{{ product.sub_category_id if product else '' }}";
-            
+
             options.forEach(opt => {
                 if (opt.value === "") {
                     opt.style.display = "block";
@@ -242,6 +402,7 @@
     });
 </script>
 
+
 <style>
     .form-grid {
         display: grid;
@@ -249,16 +410,18 @@
         gap: 1.5rem;
         margin-bottom: 2rem;
     }
+
     .form-group.full-width {
         grid-column: span 2;
     }
+
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
         font-weight: 600;
         font-size: 0.9rem;
     }
-    
+
     /* Custom Checkbox */
     .checkbox-container {
         display: flex;
@@ -271,6 +434,7 @@
         user-select: none;
         height: 24px;
     }
+
     .checkbox-container input {
         position: absolute;
         opacity: 0;
@@ -278,6 +442,7 @@
         height: 0;
         width: 0;
     }
+
     .checkmark {
         position: absolute;
         top: 0;
@@ -289,21 +454,26 @@
         border-radius: 6px;
         transition: all 0.2s;
     }
-    .checkbox-container:hover input ~ .checkmark {
+
+    .checkbox-container:hover input~.checkmark {
         background-color: #e2e8f0;
     }
-    .checkbox-container input:checked ~ .checkmark {
+
+    .checkbox-container input:checked~.checkmark {
         background-color: #c7566a;
         border-color: #c7566a;
     }
+
     .checkmark:after {
         content: "";
         position: absolute;
         display: none;
     }
-    .checkbox-container input:checked ~ .checkmark:after {
+
+    .checkbox-container input:checked~.checkmark:after {
         display: block;
     }
+
     .checkbox-container .checkmark:after {
         left: 8px;
         top: 4px;
@@ -314,7 +484,9 @@
         transform: rotate(45deg);
     }
 
-    .form-group input, .form-group select, .form-group textarea {
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
         width: 100%;
         padding: 0.8rem;
         border: 1px solid #e2e8f0;
@@ -322,13 +494,18 @@
         outline: none;
         font-family: inherit;
     }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
         border-color: #4f46e5;
     }
+
     .size-input-container select {
         margin-bottom: 0.8rem;
         background: #f8fafc;
     }
+
     .input-with-prefix {
         display: flex;
         align-items: center;
@@ -336,6 +513,7 @@
         border-radius: 10px;
         overflow: hidden;
     }
+
     .input-with-prefix .prefix {
         padding: 0 1rem;
         background: #f8fafc;
@@ -343,19 +521,23 @@
         font-weight: 600;
         color: #64748b;
     }
+
     .input-with-prefix input {
         border: none;
         border-radius: 0;
     }
+
     .form-hint {
         font-size: 0.8rem;
         color: #64748b;
         margin-top: 0.3rem;
     }
+
     .form-actions {
         display: flex;
         gap: 1rem;
     }
+
     .btn-secondary {
         background: #f1f5f9;
         color: #1e293b;
@@ -367,6 +549,7 @@
         border-radius: 10px;
         font-weight: 600;
     }
+
     .current-img-preview {
         display: flex;
         align-items: center;
@@ -377,68 +560,96 @@
         border-radius: 10px;
         border: 1px solid #e2e8f0;
     }
+
     .current-img-preview img {
         height: 50px;
         width: 50px;
         object-fit: cover;
         border-radius: 6px;
     }
+
     .current-img-preview.product-img img {
         height: 80px;
         width: 80px;
     }
+
     .current-img-preview span {
         font-size: 0.8rem;
         color: #64748b;
     }
-    input[type="file"] {
-        padding: 0.6rem;
+
+    /* Attributes Selection */
+    .attributes-selection-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        padding: 1rem;
         background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+    }
+    .attr-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #475569;
+    }
+    .attr-selection-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .attr-selection-row:last-child { border-bottom: none; }
+    
+    .quick-add-value {
+        display: flex;
+        gap: 5px;
+    }
+    .quick-add-value input {
+        width: 140px !important;
+        padding: 4px 8px !important;
+        font-size: 0.8rem !important;
+    }
+    .quick-add-value button {
+        padding: 4px 8px;
+        background: var(--admin-primary);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.75rem;
     }
 
     /* Variations Styling */
     .variations-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1rem;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
     .variation-item {
-        background: #f8fafc;
+        background: #fff;
         border: 1px solid #e2e8f0;
         border-radius: 12px;
-        padding: 1rem;
-    }
-    .var-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.8rem;
-        font-weight: 700;
-        font-size: 0.85rem;
-        color: #475569;
-    }
-    .btn-remove {
-        background: #fee2e2;
-        color: #ef4444;
-        border: none;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .var-body {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+        align-items: end;
     }
-    .var-body input, .var-body select {
-        padding: 0.5rem;
-        font-size: 0.85rem;
+    .var-body label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 4px;
+        display: block;
     }
 </style>
 {% endblock %}

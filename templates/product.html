@@ -11,8 +11,10 @@
             {{ product.badge }}
         </span>
         {% endif %}
-        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}" onclick="toggleWishlist(event, '{{ product.id }}')">
-            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist" alt="wishlist">
+        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}"
+            onclick="toggleWishlist(event, '{{ product.id }}')">
+            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist"
+                alt="wishlist">
         </div>
     </div>
     <div class="product-info">
@@ -37,7 +39,8 @@
             </div>
             {% if product.size_chart %}
             <div class="size-chart-link-wrap">
-                <a href="#sizeChartModal" class="size-chart-link"><i class="fas fa-ruler-combined"></i> View Size Chart</a>
+                <a href="#sizeChartModal" class="size-chart-link"><i class="fas fa-ruler-combined"></i> View Size
+                    Chart</a>
             </div>
             {% endif %}
         </div>
@@ -61,17 +64,18 @@
 
             <div class="stock-status {{ product.stock_status }}">
                 {% if product.stock_status == 'instock' %}
-                    <i class="fas fa-check-circle"></i> In Stock
+                <i class="fas fa-check-circle"></i> In Stock
                 {% else %}
-                    <i class="fas fa-times-circle"></i> Out of Stock
+                <i class="fas fa-times-circle"></i> Out of Stock
                 {% endif %}
             </div>
-            
+
             <p class="description">
                 {% if product.desc %}
-                    {{ product.desc }}
+                {{ product.desc }}
                 {% else %}
-                    Exquisite hand-threaded silk saree featuring traditional motifs and a contrasting border. Perfect for weddings and high-profile festive events. Lightweight yet luxurious feel with a rich pallu.
+                Exquisite hand-threaded silk saree featuring traditional motifs and a contrasting border. Perfect for
+                weddings and high-profile festive events. Lightweight yet luxurious feel with a rich pallu.
                 {% endif %}
             </p>
 
@@ -82,7 +86,8 @@
                 </div>
                 <div class="size-options selector-group" id="sizeSelector">
                     {% for size in product.sizes.split(',') %}
-                    <button class="size-btn {{ 'active' if loop.first }}" data-size="{{ size.strip() }}">{{ size.strip() }}</button>
+                    <button class="size-btn {{ 'active' if loop.first }}" data-size="{{ size.strip() }}">{{ size.strip()
+                        }}</button>
                     {% endfor %}
                 </div>
             </div>
@@ -95,7 +100,8 @@
                 </div>
                 <div class="color-options selector-group" id="colorSelector">
                     {% for color in product.colors.split(',') %}
-                    <button class="color-btn {{ 'active' if loop.first }}" data-color="{{ color.strip() }}">{{ color.strip() }}</button>
+                    <button class="color-btn {{ 'active' if loop.first }}" data-color="{{ color.strip() }}">{{
+                        color.strip() }}</button>
                     {% endfor %}
                 </div>
             </div>
@@ -103,7 +109,8 @@
 
             <div class="action-btns">
                 <button class="add-to-cart" data-id="{{ product.id }}" onclick="addToCart(this)">Add to Cart</button>
-                <button class="wishlist-btn-large {% if product.id in session.get('wishlist', []) %}active{% endif %}" onclick="toggleWishlist(event, '{{ product.id }}', true)">
+                <button class="wishlist-btn-large {% if product.id in session.get('wishlist', []) %}active{% endif %}"
+                    onclick="toggleWishlist(event, '{{ product.id }}', true)">
                     <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
                 </button>
             </div>
@@ -121,7 +128,7 @@
         <h2 class="related-title">You May Also Like</h2>
         <div class="related-grid">
             {% for p in related %}
-                {{ product_card(p) }}
+            {{ product_card(p) }}
             {% endfor %}
         </div>
     </section>
@@ -143,6 +150,7 @@
         margin-top: 1rem;
         text-align: center;
     }
+
     .size-chart-link {
         color: var(--crimson);
         text-decoration: none;
@@ -152,15 +160,18 @@
         align-items: center;
         gap: 8px;
     }
+
     .size-chart-link:hover {
         text-decoration: underline;
     }
+
     .variant-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
     }
+
     .size-btn {
         padding: 10px 20px;
         border: 1px solid #e2e8f0;
@@ -170,11 +181,13 @@
         font-weight: 600;
         transition: all 0.3s;
     }
+
     .size-btn.active {
         border-color: var(--crimson);
         background: var(--crimson);
         color: #fff;
     }
+
     .color-btn {
         padding: 8px 16px;
         border: 1px solid #e2e8f0;
@@ -184,18 +197,26 @@
         font-weight: 500;
         transition: 0.3s;
     }
+
     .color-btn.active {
         border-color: var(--crimson);
         background: #fff5f6;
         color: var(--crimson);
     }
+
     .stock-status {
         margin: 1rem 0;
         font-weight: 600;
         font-size: 0.9rem;
     }
-    .stock-status.instock { color: #10b981; }
-    .stock-status.outofstock { color: #ef4444; }
+
+    .stock-status.instock {
+        color: #10b981;
+    }
+
+    .stock-status.outofstock {
+        color: #ef4444;
+    }
 
     /* Modal Styles */
     .modal {
@@ -206,9 +227,10 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0,0,0,0.6);
+        background-color: rgba(0, 0, 0, 0.6);
         backdrop-filter: blur(5px);
     }
+
     .modal-content {
         background-color: #fff;
         margin: 5% auto;
@@ -218,6 +240,7 @@
         max-width: 600px;
         position: relative;
     }
+
     .close-modal {
         position: absolute;
         right: 20px;
@@ -248,11 +271,11 @@
         const colorBtn = document.querySelector('#colorSelector .color-btn.active');
         const size = sizeBtn ? sizeBtn.getAttribute('data-size') : '';
         const color = colorBtn ? colorBtn.getAttribute('data-color') : '';
-        
+
         const formData = new FormData();
         formData.append('size', size);
         formData.append('color', color);
-        
+
         fetch(`/add-to-cart/${productId}`, {
             method: 'POST',
             body: formData,
@@ -260,24 +283,24 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const badge = document.getElementById('cartBadge');
-                if (badge) badge.innerText = data.cart_count;
-                
-                const originalText = btn.innerText;
-                btn.innerText = 'Added to Bag!';
-                btn.style.background = '#10b981';
-                btn.style.color = '#fff';
-                
-                setTimeout(() => {
-                    btn.innerText = originalText;
-                    btn.style.background = '';
-                    btn.style.color = '';
-                }, 2000);
-            }
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const badge = document.getElementById('cartBadge');
+                    if (badge) badge.innerText = data.cart_count;
+
+                    const originalText = btn.innerText;
+                    btn.innerText = 'Added to Bag!';
+                    btn.style.background = '#10b981';
+                    btn.style.color = '#fff';
+
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.style.background = '';
+                        btn.style.color = '';
+                    }, 2000);
+                }
+            });
     }
 
     // Modal logic
@@ -286,19 +309,19 @@
     const close = document.querySelector(".close-modal");
 
     if (link) {
-        link.onclick = function(e) {
+        link.onclick = function (e) {
             e.preventDefault();
             modal.style.display = "block";
         }
     }
 
     if (close) {
-        close.onclick = function() {
+        close.onclick = function () {
             modal.style.display = "none";
         }
     }
 
-    window.onclick = function(event) {
+    window.onclick = function (event) {
         if (event.target == modal) {
             modal.style.display = "none";
         }

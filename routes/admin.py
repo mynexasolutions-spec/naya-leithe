@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, session, redirect, url_for, abort, request, flash
+from flask import Blueprint, render_template, session, redirect, url_for, abort, request, flash, jsonify
 from functools import wraps
-from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig
+from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
@@ -101,6 +101,7 @@ def new_product():
         stock_status = request.form.get('stock_status', 'instock')
         category_id = request.form.get('category_id')
         sub_category_id = request.form.get('sub_category_id')
+        brand_id = request.form.get('brand_id')
         is_featured = True if request.form.get('is_featured') == 'on' else False
         
         category = Category.query.get(category_id)
@@ -124,6 +125,7 @@ def new_product():
             cat_name=cat_name, 
             category_id=category_id,
             sub_category_id=sub_category_id,
+            brand_id=brand_id,
             badge=badge, 
             img=img,
             sizes=sizes,
@@ -136,29 +138,47 @@ def new_product():
         )
         db.session.add(product)
         
+        # Handle Product Attributes
+        selected_attr_ids = request.form.getlist('product_attributes[]')
+        for attr_id in selected_attr_ids:
+            prod_attr = ProductAttribute(product_id=new_id, attribute_id=attr_id)
+            db.session.add(prod_attr)
+        
         # Handle Variations if Variable Product
         if product_type == 'variable':
-            v_sizes = request.form.getlist('var_size[]')
-            v_colors = request.form.getlist('var_color[]')
             v_prices = request.form.getlist('var_price[]')
             v_stocks = request.form.getlist('var_stock[]')
             
-            for i in range(len(v_sizes)):
+            attr_values_map = {}
+            for attr_id in selected_attr_ids:
+                attr_values_map[attr_id] = request.form.getlist(f'var_attr_{attr_id}[]')
+            
+            num_variations = len(v_stocks)
+            for i in range(num_variations):
                 variation = ProductVariation(
                     product_id=new_id,
-                    size=v_sizes[i],
-                    color=v_colors[i],
                     price=v_prices[i] if v_prices[i] else product.price,
                     stock_status=v_stocks[i]
                 )
                 db.session.add(variation)
+                db.session.flush() # Get variation ID
+                
+                for attr_id, values_list in attr_values_map.items():
+                    if i < len(values_list):
+                        option = VariationOption(
+                            variation_id=variation.id,
+                            attribute_value_id=values_list[i]
+                        )
+                        db.session.add(option)
 
         db.session.commit()
         flash('Product added successfully!', 'success')
         return redirect(url_for('admin.products'))
     categories = Category.query.all()
     subcategories = SubCategory.query.all()
-    return render_template('admin/product_form.html', categories=categories, subcategories=subcategories)
+    attributes = Attribute.query.all()
+    brands = Brand.query.all()
+    return render_template('admin/product_form.html', categories=categories, subcategories=subcategories, attributes=attributes, brands=brands)
 
 @admin_bp.route('/admin/product/edit/<id>', methods=['GET', 'POST'])
 @admin_required
@@ -182,6 +202,7 @@ def edit_product(id):
         category_id = request.form.get('category_id')
         product.category_id = category_id
         product.sub_category_id = request.form.get('sub_category_id')
+        product.brand_id = request.form.get('brand_id')
         product.is_featured = True if request.form.get('is_featured') == 'on' else False
         
         category = Category.query.get(category_id)
@@ -198,26 +219,42 @@ def edit_product(id):
         if size_chart_file and size_chart_file.filename:
             product.size_chart = save_image(size_chart_file, 'size_charts')
         
-        # Handle Variations
-        from models import ProductVariation
-        # Clear existing variations first
+        # Clear existing attributes and variations
+        ProductAttribute.query.filter_by(product_id=product.id).delete()
         ProductVariation.query.filter_by(product_id=product.id).delete()
         
+        # Handle Product Attributes
+        selected_attr_ids = request.form.getlist('product_attributes[]')
+        for attr_id in selected_attr_ids:
+            prod_attr = ProductAttribute(product_id=product.id, attribute_id=attr_id)
+            db.session.add(prod_attr)
+        
+        # Handle Variations
         if product.product_type == 'variable':
-            v_sizes = request.form.getlist('var_size[]')
-            v_colors = request.form.getlist('var_color[]')
             v_prices = request.form.getlist('var_price[]')
             v_stocks = request.form.getlist('var_stock[]')
             
-            for i in range(len(v_sizes)):
+            attr_values_map = {}
+            for attr_id in selected_attr_ids:
+                attr_values_map[attr_id] = request.form.getlist(f'var_attr_{attr_id}[]')
+            
+            num_variations = len(v_stocks)
+            for i in range(num_variations):
                 variation = ProductVariation(
                     product_id=product.id,
-                    size=v_sizes[i],
-                    color=v_colors[i],
                     price=v_prices[i] if v_prices[i] else product.price,
                     stock_status=v_stocks[i]
                 )
                 db.session.add(variation)
+                db.session.flush() # Get variation ID
+                
+                for attr_id, values_list in attr_values_map.items():
+                    if i < len(values_list):
+                        option = VariationOption(
+                            variation_id=variation.id,
+                            attribute_value_id=values_list[i]
+                        )
+                        db.session.add(option)
 
         db.session.commit()
         flash('Product updated successfully!', 'success')
@@ -225,7 +262,9 @@ def edit_product(id):
         
     categories = Category.query.all()
     subcategories = SubCategory.query.all()
-    return render_template('admin/product_form.html', categories=categories, subcategories=subcategories, product=product)
+    attributes = Attribute.query.all()
+    brands = Brand.query.all()
+    return render_template('admin/product_form.html', categories=categories, subcategories=subcategories, attributes=attributes, brands=brands, product=product)
 
 @admin_bp.route('/admin/product/delete/<id>', methods=['POST'])
 @admin_required
@@ -348,3 +387,147 @@ def settings():
         return redirect(url_for('admin.settings'))
     configs = {c.key: c.value for c in AppConfig.query.all()}
     return render_template('admin/settings.html', configs=configs)
+
+# --- ATTRIBUTE ROUTES ---
+
+@admin_bp.route('/admin/attributes')
+@admin_required
+def admin_attributes():
+    all_attributes = Attribute.query.all()
+    for attr in all_attributes:
+        attr.value_count = len(attr.values)
+    return render_template('admin/attributes.html', attributes=all_attributes)
+
+@admin_bp.route('/admin/attribute/new', methods=['GET', 'POST'])
+@admin_required
+def admin_attribute_new():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        slug = request.form.get('slug')
+        image_url = request.form.get('image_url')
+        is_featured = True if request.form.get('is_featured') == 'on' else False
+        
+        if not slug:
+            slug = name.lower().replace(' ', '-')
+            
+        attribute = Attribute(name=name, slug=slug, image_url=image_url, is_featured=is_featured)
+        db.session.add(attribute)
+        db.session.commit()
+        flash('Attribute added successfully!', 'success')
+        return redirect(url_for('admin.admin_attributes'))
+    return render_template('admin/attribute_form.html')
+
+@admin_bp.route('/admin/attribute/edit/<int:attr_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_attribute_edit(attr_id):
+    attribute = Attribute.query.get(attr_id)
+    if not attribute:
+        abort(404)
+        
+    if request.method == 'POST':
+        attribute.name = request.form.get('name')
+        attribute.slug = request.form.get('slug')
+        attribute.image_url = request.form.get('image_url')
+        attribute.is_featured = True if request.form.get('is_featured') == 'on' else False
+        
+        db.session.commit()
+        flash('Attribute updated successfully!', 'success')
+        return redirect(url_for('admin.admin_attributes'))
+        
+    return render_template('admin/attribute_form.html', attribute=attribute)
+
+@admin_bp.route('/admin/attribute/delete/<int:attr_id>', methods=['POST'])
+@admin_required
+def admin_attribute_delete(attr_id):
+    attribute = Attribute.query.get(attr_id)
+    if attribute:
+        db.session.delete(attribute)
+        db.session.commit()
+        flash('Attribute deleted!', 'success')
+    return redirect(url_for('admin.admin_attributes'))
+
+@admin_bp.route('/admin/attribute/<int:attr_id>/values', methods=['GET', 'POST'])
+@admin_required
+def admin_attribute_values(attr_id):
+    attribute = Attribute.query.get(attr_id)
+    if not attribute:
+        abort(404)
+        
+    if request.method == 'POST':
+        value_content = request.form.get('value')
+        image_url = request.form.get('image_url')
+        
+        new_val = AttributeValue(attribute_id=attr_id, value=value_content, image_url=image_url)
+        db.session.add(new_val)
+        db.session.commit()
+        flash('Value added!', 'success')
+        return redirect(url_for('admin.admin_attribute_values', attr_id=attr_id))
+        
+    values = AttributeValue.query.filter_by(attribute_id=attr_id).all()
+    return render_template('admin/attribute_values.html', attribute=attribute, values=values)
+
+@admin_bp.route('/admin/attribute/value/delete/<int:val_id>', methods=['POST'])
+@admin_required
+def admin_attribute_value_delete(val_id):
+    val = AttributeValue.query.get(val_id)
+    if val:
+        attr_id = val.attribute_id
+        db.session.delete(val)
+        db.session.commit()
+        flash('Value removed!', 'success')
+        return redirect(url_for('admin.admin_attribute_values', attr_id=attr_id))
+    return redirect(url_for('admin.admin_attributes'))
+
+
+@admin_bp.route('/admin/attribute/<int:attr_id>/value/quick-add', methods=['POST'])
+@admin_required
+def admin_attribute_value_quick_add(attr_id):
+    data = request.get_json()
+    value_content = data.get('value', '').strip()
+    if not value_content:
+        return jsonify({'success': False, 'error': 'Value is required'}), 400
+    
+    # Check for duplicates
+    existing = AttributeValue.query.filter_by(attribute_id=attr_id).filter(AttributeValue.value.ilike(value_content)).first()
+    if existing:
+        return jsonify({'success': True, 'id': existing.id, 'existed': True})
+    
+    new_val = AttributeValue(attribute_id=attr_id, value=value_content)
+    db.session.add(new_val)
+    db.session.commit()
+    return jsonify({'success': True, 'id': new_val.id})
+
+# --- BRAND ROUTES ---
+
+@admin_bp.route('/admin/brands')
+@admin_required
+def brands():
+    all_brands = Brand.query.all()
+    return render_template('admin/brands.html', brands=all_brands)
+
+@admin_bp.route('/admin/brand/new', methods=['GET', 'POST'])
+@admin_required
+def new_brand():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        logo_file = request.files.get('logo')
+        logo = save_image(logo_file, 'brands') if logo_file else None
+        
+        brand = Brand(name=name, logo=logo)
+        db.session.add(brand)
+        db.session.commit()
+        flash('Brand added successfully!', 'success')
+        return redirect(url_for('admin.brands'))
+    return render_template('admin/brand_form.html')
+
+@admin_bp.route('/admin/brand/delete/<int:id>', methods=['POST'])
+@admin_required
+def delete_brand(id):
+    brand = Brand.query.get(id)
+    if brand:
+        delete_image(brand.logo)
+        db.session.delete(brand)
+        db.session.commit()
+        flash('Brand deleted!', 'success')
+    return redirect(url_for('admin.brands'))
+

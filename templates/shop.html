@@ -223,6 +223,7 @@
 
     const uncheckAll = () => {
         if (allProductsCheckbox) allProductsCheckbox.checked = false;
+        toggleSidebar(false);
         // Auto submit form when checkbox changes
         document.getElementById('filterForm').submit();
     };
@@ -232,6 +233,7 @@
             if (this.checked) {
                 categoryCheckboxes.forEach(cb => cb.checked = false);
                 subcategoryCheckboxes.forEach(cb => cb.checked = false);
+                toggleSidebar(false);
                 document.getElementById('filterForm').submit();
             }
         });
