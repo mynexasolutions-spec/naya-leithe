@@ -347,6 +347,85 @@
         }
     </script>
     {% block scripts %}{% endblock %}
+    <!-- Lenis Smooth Scroll -->
+    <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+    <script>
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            direction: 'vertical',
+            gestureDirection: 'vertical',
+            smooth: true,
+            mouseMultiplier: 1,
+            smoothTouch: false,
+            touchMultiplier: 2,
+            infinite: false,
+        });
+
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+
+        // Global Horizontal Drag with Inertia + Lenis Sync
+        document.addEventListener('DOMContentLoaded', () => {
+            const tracks = document.querySelectorAll('.categories-track, .carousel-track, .testimonials-grid, [id$="-track"], .hero-cards');
+            const isDesktop = window.innerWidth > 1024;
+            tracks.forEach(track => {
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+                let velocity = 0;
+                let lastX;
+                let rafId;
+
+                const beginDrag = (e) => {
+                    if (e.type === 'mousedown' && e.button !== 0) return;
+                    isDown = true;
+                    startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                    scrollLeft = track.scrollLeft;
+                    lastX = startX;
+                    velocity = 0;
+                    cancelAnimationFrame(rafId);
+                    track.style.transition = 'none';
+                    track.style.cursor = 'grabbing';
+                };
+
+                const duringDrag = (e) => {
+                    if (!isDown) return;
+                    const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                    const walk = (x - startX);
+                    track.scrollLeft = scrollLeft - walk;
+                    
+                    velocity = x - lastX;
+                    lastX = x;
+                };
+
+                const endDrag = () => {
+                    if (!isDown) return;
+                    isDown = false;
+                    track.style.cursor = 'grab';
+                    
+                    const applyInertia = () => {
+                        if (Math.abs(velocity) < 0.1) return;
+                        track.scrollLeft -= velocity;
+                        velocity *= 0.95;
+                        rafId = requestAnimationFrame(applyInertia);
+                    };
+                    rafId = requestAnimationFrame(applyInertia);
+                };
+
+                track.addEventListener('mousedown', beginDrag);
+                track.addEventListener('mousemove', duringDrag);
+                window.addEventListener('mouseup', endDrag);
+
+                track.addEventListener('touchstart', beginDrag, { passive: true });
+                track.addEventListener('touchmove', duringDrag, { passive: true });
+                track.addEventListener('touchend', endDrag);
+            });
+        });
+    </script>
 </body>
 
 </html>

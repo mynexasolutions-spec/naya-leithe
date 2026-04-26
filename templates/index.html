@@ -9,9 +9,9 @@
                 <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%23ffffff" alt="prev">
             </button>
             {% endif %}
-            
+
             <h2 class="section-title">{{ title }}</h2>
-            
+
             {% if on_scroll %}
             <button class="nav-arrow desktop-nav" onclick="scrollTrack('{{ on_scroll }}', 1)">
                 <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%23ffffff" alt="next">
@@ -226,48 +226,56 @@
     {{ section_header("What Our Customers Say", on_scroll="testimonials-grid") }}
     <div class="testimonials-grid fade-in" id="testimonials-grid">
         {% if featured_reviews %}
-            {% for review in featured_reviews %}
-            <div class="testimonial-card">
-                <div class="testimonial-stars">
-                    {% for i in range(review.rating) %}★{% endfor %}
-                    {% for i in range(5 - review.rating) %}☆{% endfor %}
+        {% for review in featured_reviews %}
+        <div class="testimonial-card">
+            <div class="testimonial-stars">
+                {% for i in range(review.rating) %}★{% endfor %}
+                {% for i in range(5 - review.rating) %}☆{% endfor %}
+            </div>
+            <div class="testimonial-text">"{{ review.comment }}"</div>
+            <div class="testimonial-author">
+                <div class="profile-circle"
+                    style="width: 40px; height: 40px; font-size: 14px; margin-right: 12px; background: var(--crimson); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">
+                    {{ (review.customer_name[0] if review.customer_name else (review.user_rel.email[0] if
+                    review.user_rel else 'A')).upper() }}
                 </div>
-                <div class="testimonial-text">"{{ review.comment }}"</div>
-                <div class="testimonial-author">
-                    <div class="profile-circle" style="width: 40px; height: 40px; font-size: 14px; margin-right: 12px; background: var(--crimson); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">
-                        {{ (review.customer_name[0] if review.customer_name else (review.user_rel.email[0] if review.user_rel else 'A')).upper() }}
-                    </div>
-                    <div>
-                        <div class="testimonial-name">{{ review.customer_name or (review.user_rel.username if review.user_rel else 'Anonymous') }}</div>
-                        <div class="testimonial-loc">{{ review.customer_location or (review.user_rel.city if review.user_rel else 'India') }}</div>
-                    </div>
+                <div>
+                    <div class="testimonial-name">{{ review.customer_name or (review.user_rel.username if
+                        review.user_rel else 'Anonymous') }}</div>
+                    <div class="testimonial-loc">{{ review.customer_location or (review.user_rel.city if review.user_rel
+                        else 'India') }}</div>
                 </div>
             </div>
-            {% endfor %}
+        </div>
+        {% endfor %}
         {% else %}
-            <!-- Static fallback reviews -->
-            <div class="testimonial-card">
-                <div class="testimonial-stars">★★★★★</div>
-                <div class="testimonial-text">"Absolutely loved my silk saree from Naye Leithe! The quality is outstanding and the colours are exactly as shown. Will definitely order again."</div>
-                <div class="testimonial-author">
-                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
-                    <div>
-                        <div class="testimonial-name">Priya Sharma</div>
-                        <div class="testimonial-loc">Mumbai, India</div>
-                    </div>
+        <!-- Static fallback reviews -->
+        <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★★</div>
+            <div class="testimonial-text">"Absolutely loved my silk saree from Naye Leithe! The quality is outstanding
+                and the colours are exactly as shown. Will definitely order again."</div>
+            <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop"
+                    class="testimonial-avatar" alt="avatar">
+                <div>
+                    <div class="testimonial-name">Priya Sharma</div>
+                    <div class="testimonial-loc">Mumbai, India</div>
                 </div>
             </div>
-            <div class="testimonial-card">
-                <div class="testimonial-stars">★★★★★</div>
-                <div class="testimonial-text">"The cord set I ordered was so elegant and the stitching is perfect. Got so many compliments at the party! Fast delivery too."</div>
-                <div class="testimonial-author">
-                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
-                    <div>
-                        <div class="testimonial-name">Riya Mehta</div>
-                        <div class="testimonial-loc">Delhi, India</div>
-                    </div>
+        </div>
+        <div class="testimonial-card">
+            <div class="testimonial-stars">★★★★★</div>
+            <div class="testimonial-text">"The cord set I ordered was so elegant and the stitching is perfect. Got so
+                many compliments at the party! Fast delivery too."</div>
+            <div class="testimonial-author">
+                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop"
+                    class="testimonial-avatar" alt="avatar">
+                <div>
+                    <div class="testimonial-name">Riya Mehta</div>
+                    <div class="testimonial-loc">Delhi, India</div>
                 </div>
             </div>
+        </div>
         {% endif %}
     </div>
 </section>
@@ -293,60 +301,20 @@
 
         const gap = parseInt(window.getComputedStyle(track).gap) || 16;
         const cardW = track.firstElementChild.offsetWidth + gap;
-        const containerW = track.parentElement.offsetWidth;
-        const max = track.scrollWidth - containerW;
 
-        let currentOffset = parseFloat(track.dataset.offset || 0);
-        currentOffset = Math.max(0, Math.min(max, currentOffset + dir * cardW)); // scroll one card at a time or two
+        if (track.__marquee) {
+            track.__marquee.pause(3000);
+        }
 
-        track.style.transform = `translateX(-${currentOffset}px)`;
-        track.dataset.offset = currentOffset;
+        const newScroll = track.scrollLeft + (dir * cardW);
+        track.scrollTo({
+            left: newScroll,
+            behavior: 'smooth'
+        });
     }
 
-    // Touch support for swiping
     document.addEventListener('DOMContentLoaded', () => {
-        // Find all tracks including dynamic ones
-        const tracks = document.querySelectorAll('.categories-track, .carousel-track, .testimonials-grid, [id$="-track"]');
 
-        tracks.forEach(track => {
-            let startX, currentX, initialOffset;
-            let isDown = false;
-
-            const handleStart = (e) => {
-                isDown = true;
-                startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                initialOffset = parseFloat(track.dataset.offset || 0);
-                track.style.transition = 'none';
-            };
-
-            const handleMove = (e) => {
-                if (!isDown) return;
-                currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                const diff = startX - currentX;
-                const containerW = track.parentElement.offsetWidth;
-                const max = track.scrollWidth - containerW;
-
-                let newOffset = initialOffset + diff;
-                newOffset = Math.max(0, Math.min(max, newOffset));
-
-                track.style.transform = `translateX(-${newOffset}px)`;
-                track.dataset.offset = newOffset;
-            };
-
-            const handleEnd = () => {
-                isDown = false;
-                track.style.transition = 'transform .4s cubic-bezier(.4, 0, .2, 1)';
-            };
-
-            track.addEventListener('touchstart', handleStart);
-            track.addEventListener('touchmove', handleMove);
-            track.addEventListener('touchend', handleEnd);
-
-            // Mouse support for desktop swiping too
-            track.addEventListener('mousedown', handleStart);
-            track.addEventListener('mousemove', handleMove);
-            window.addEventListener('mouseup', handleEnd);
-        });
 
         // Seamless Infinite Scroll function (Marquee)
         function setupContinuousScroll(selector, speed = 1) {
@@ -357,69 +325,71 @@
             track.dataset.cloned = "true";
 
             const container = track.parentElement;
-            const originalWidth = track.scrollWidth;
-            // Clone multiple times to ensure no gaps
-            for (let i = 0; i < 3; i++) {
-                const clones = Array.from(track.children).map(child => child.cloneNode(true));
-                clones.forEach(clone => track.appendChild(clone));
-            }
             const originalItems = Array.from(track.children);
-            if (originalItems.length === 0) return;
 
-            // Clone items until we have enough to cover at least 2x the container width
-            // Added safety limit to prevent infinite loops
-            let safetyLimit = 0;
-            while (track.scrollWidth < container.offsetWidth * 2 && safetyLimit < 10) {
+            for (let i = 0; i < 3; i++) {
                 originalItems.forEach(item => {
                     const clone = item.cloneNode(true);
-                    clone.classList.add('is-clone');
                     track.appendChild(clone);
                 });
-                safetyLimit++;
-                // Break if scrollWidth isn't increasing (e.g. elements are hidden)
-                if (track.scrollWidth === 0) break;
             }
 
-            let scrollPos = 0;
+            const state = {
+                scrollPos: 0,
+                isPaused: false,
+                pauseTimeout: null
+            };
+
+            track.__marquee = {
+                pause: (duration = 2000) => {
+                    state.isPaused = true;
+                    clearTimeout(state.pauseTimeout);
+                    state.pauseTimeout = setTimeout(() => state.isPaused = false, duration);
+                }
+            };
+
+            track.addEventListener('mouseenter', () => state.isPaused = true);
+            track.addEventListener('mouseleave', () => state.isPaused = false);
+            track.addEventListener('touchstart', () => state.isPaused = true);
+            track.addEventListener('touchend', () => track.__marquee.pause(2000));
+
             function step() {
-                scrollPos += speed;
-                const totalWidth = track.scrollWidth;
-                const itemWidth = totalWidth / track.children.length;
-                const originalWidth = originalItems.length * itemWidth;
+                if (!state.isPaused) {
+                    state.scrollPos += speed;
+                    const totalWidth = track.scrollWidth;
+                    const itemWidth = totalWidth / track.children.length;
+                    const originalWidth = originalItems.length * itemWidth;
 
-                if (scrollPos >= originalWidth) {
-                    scrollPos -= originalWidth;
-                }
+                    if (state.scrollPos >= originalWidth) {
+                        state.scrollPos -= originalWidth;
+                    }
 
-                // Center pop effect for hero-cards
-                if (selector === '.hero-cards') {
-                    const containerRect = container.getBoundingClientRect();
-                    const centerX = containerRect.left + containerRect.width / 2;
+                    // Center pop effect for hero-cards
+                    if (selector === '.hero-cards') {
+                        const containerRect = container.getBoundingClientRect();
+                        const centerX = containerRect.left + containerRect.width / 2;
 
-                    Array.from(track.children).forEach(card => {
-                        const cardRect = card.getBoundingClientRect();
-                        const cardCenterX = cardRect.left + cardRect.width / 2;
-                        const dist = Math.abs(centerX - cardCenterX);
-                        const maxDist = containerRect.width / 2;
+                        Array.from(track.children).forEach(card => {
+                            const cardRect = card.getBoundingClientRect();
+                            const cardCenterX = cardRect.left + cardRect.width / 2;
+                            const dist = Math.abs(centerX - cardCenterX);
 
-                        // Scale up if close to center
-                        if (dist < 100) {
-                            const scale = 1 + (1 - dist / 100) * 0.15;
-                            card.style.transform = `scale(${scale})`;
-                            card.style.zIndex = "10";
-                            card.style.borderColor = "var(--crimson)";
-                        } else {
-                            card.style.transform = `scale(1)`;
-                            card.style.zIndex = "1";
-                            card.style.borderColor = "#fff";
-                        }
-                    });
-                }
+                            if (dist < 100) {
+                                const scale = 1 + (1 - dist / 100) * 0.15;
+                                card.style.transform = `scale(${scale})`;
+                                card.style.zIndex = "10";
+                                card.style.borderColor = "var(--crimson)";
+                            } else {
+                                card.style.transform = `scale(1)`;
+                                card.style.zIndex = "1";
+                                card.style.borderColor = "#fff";
+                            }
+                        });
+                    }
 
-                if (container.classList.contains('hero-cards') || container.classList.contains('categories-scroll-wrapper')) {
-                    container.scrollLeft = scrollPos;
+                    track.scrollLeft = state.scrollPos;
                 } else {
-                    track.scrollLeft = scrollPos;
+                    state.scrollPos = track.scrollLeft;
                 }
                 requestAnimationFrame(step);
             }
