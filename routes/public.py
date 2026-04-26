@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, abort, session, jsonify
-from models import Category, Product, SubCategory
+from models import Category, Product, SubCategory, Review
 
 public_bp = Blueprint('public', __name__)
 
@@ -9,14 +9,26 @@ def home():
     all_products = Product.query.all()
     
     new_arrivals = [p for p in all_products if p.badge == 'New'][:8]
-    ethnic_wear = [p for p in all_products if p.cat_name == 'Ethnic Wear'][:8]
     featured_products = [p for p in all_products if p.is_featured or p.id.startswith('fp')][:8]
+    
+    category_sections = []
+    for cat in categories:
+        prods = [p for p in all_products if p.cat_name == cat.name][:8]
+        if prods:
+            category_sections.append({
+                'name': cat.name,
+                'products': prods,
+                'id': cat.name.lower().replace(' ', '-')
+            })
+    
+    featured_reviews = Review.query.filter_by(is_featured=True, status='Approved').all()
     
     return render_template('index.html', 
                            new_arrivals=new_arrivals, 
-                           ethnic_wear=ethnic_wear, 
+                           category_sections=category_sections, 
                            categories=categories,
-                           featured_products=featured_products)
+                           featured_products=featured_products,
+                           featured_reviews=featured_reviews)
 
 @public_bp.route('/shop')
 def shop():
@@ -57,6 +69,26 @@ def wishlist():
     wishlist_ids = session.get('wishlist', [])
     products = Product.query.filter(Product.id.in_(wishlist_ids)).all()
     return render_template('wishlist.html', products=products)
+
+@public_bp.route('/privacy-policy')
+def privacy():
+    return render_template('privacy.html')
+
+@public_bp.route('/terms-conditions')
+def terms():
+    return render_template('terms.html')
+
+@public_bp.route('/shipping-policy')
+def shipping():
+    return render_template('shipping.html')
+
+@public_bp.route('/cancellation-refund')
+def refund():
+    return render_template('refund.html')
+
+@public_bp.route('/contact')
+def contact():
+    return render_template('contact.html')
 
 @public_bp.route('/toggle-wishlist/<id>', methods=['POST'])
 def toggle_wishlist(id):

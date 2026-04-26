@@ -42,6 +42,12 @@
                     <li class="{{ 'active' if 'customer' in request.endpoint }}">
                         <a href="{{ url_for('admin.customers') }}"><i class="fas fa-users"></i> Customers</a>
                     </li>
+                    <li class="{{ 'active' if 'review' in request.endpoint }}">
+                        <a href="{{ url_for('admin.reviews') }}"><i class="fas fa-star"></i> Reviews</a>
+                    </li>
+                    <li class="{{ 'active' if 'coupon' in request.endpoint }}">
+                        <a href="{{ url_for('admin.coupons') }}"><i class="fas fa-ticket-alt"></i> Coupons</a>
+                    </li>
                     <li class="{{ 'active' if 'setting' in request.endpoint }}">
                         <a href="{{ url_for('admin.settings') }}"><i class="fas fa-cog"></i> Settings</a>
                     </li>

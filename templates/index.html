@@ -2,24 +2,38 @@
 
 {% macro section_header(title, on_scroll=None, view_all=None) %}
 <div class="section-header">
-    <div class="section-nav-mobile">
-        {% if on_scroll %}
-        <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', -1)">
-            <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%238b1a2a" alt="prev">
-        </button>
-        {% endif %}
-    </div>
     <div class="section-center">
-        <h2 class="section-title">{{ title }}</h2>
+        <div class="section-title-container">
+            {% if on_scroll %}
+            <button class="nav-arrow desktop-nav" onclick="scrollTrack('{{ on_scroll }}', -1)">
+                <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%23ffffff" alt="prev">
+            </button>
+            {% endif %}
+            
+            <h2 class="section-title">{{ title }}</h2>
+            
+            {% if on_scroll %}
+            <button class="nav-arrow desktop-nav" onclick="scrollTrack('{{ on_scroll }}', 1)">
+                <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%23ffffff" alt="next">
+            </button>
+            {% endif %}
+        </div>
+
         {% if view_all %}
-        <a href="{{ view_all }}" class="view-all-link">View All</a>
+        <div class="view-all-container">
+            <a href="{{ view_all }}" class="view-all-link">View All</a>
+        </div>
         {% endif %}
-    </div>
-    <div class="section-nav-mobile">
+
         {% if on_scroll %}
-        <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', 1)">
-            <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%238b1a2a" alt="next">
-        </button>
+        <div class="section-nav-mobile">
+            <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', -1)">
+                <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%23ffffff" alt="prev">
+            </button>
+            <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', 1)">
+                <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%23ffffff" alt="next">
+            </button>
+        </div>
         {% endif %}
     </div>
 </div>
@@ -40,6 +54,11 @@
             onclick="toggleWishlist(event, '{{ product.id }}')">
             <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist"
                 alt="wishlist">
+        </div>
+        <!-- Mobile category-card style overlay (visible only in new arrivals on mobile) -->
+        <div class="na-mobile-overlay">
+            <div class="na-mobile-name">{{ product.name }}</div>
+            <div class="na-mobile-price">{{ product.price }}</div>
         </div>
     </div>
     <div class="product-info">
@@ -62,13 +81,8 @@
 {% block content %}
 <!-- Hero Section -->
 <section class="hero">
-    <div class="hero-bg-images">
-        <div class="hero-bg-strip"
-            style="background-image: url('https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=400&q=80')">
-        </div>
-        <div class="hero-bg-strip"
-            style="background-image: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=80')">
-        </div>
+    <div class="hero-bg">
+        <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&q=80" alt="Hero Background">
     </div>
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -105,11 +119,10 @@
     <div class="categories-scroll-wrapper">
         <div class="categories-track fade-in" id="categories-track">
             {% for cat in categories %}
-            <div class="cat-card" style="background: {{ cat.bg }}">
-                <img src="{{ cat.img }}" alt="{{ cat.name }}" loading="lazy">
+            <div class="cat-card" style="background-image: url('{{ cat.img }}')">
                 <div class="cat-card-overlay">
                     <div class="cat-card-name">{{ cat.name }}</div>
-                    <div class="cat-card-count">{{ cat.count }}</div>
+                    <div class="cat-pill">{{ cat.count }}+ COLLECTIONS</div>
                 </div>
             </div>
             {% endfor %}
@@ -121,7 +134,7 @@
 <section id="new-arrivals" style="background: var(--cream)">
     {{ section_header("New Arrivals", on_scroll="new-arrivals-track") }}
     <div class="scroll-carousel fade-in">
-        <div class="carousel-track" id="new-arrivals-track">
+        <div class="carousel-track na-carousel-track" id="new-arrivals-track">
             {% for prod in new_arrivals %}
             {{ product_card(prod) }}
             {% endfor %}
@@ -165,6 +178,20 @@
     </div>
 </section>
 
+<!-- Dynamic Category Sections -->
+{% for section in category_sections %}
+<section id="{{ section.id }}" style="background: {{ 'var(--warm-white)' if loop.index is even else 'var(--cream)' }}">
+    {{ section_header(section.name, on_scroll=section.id + '-track') }}
+    <div class="scroll-carousel fade-in">
+        <div class="carousel-track na-carousel-track" id="{{ section.id }}-track">
+            {% for prod in section.products %}
+            {{ product_card(prod) }}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endfor %}
+
 
 <!-- Why Choose Us -->
 <div class="why-us fade-in">
@@ -196,47 +223,52 @@
 
 <!-- Testimonials -->
 <section class="testimonials-section">
-    {{ section_header("What Our Customers Say") }}
-    <div class="testimonials-grid fade-in">
-        <div class="testimonial-card">
-            <div class="testimonial-stars">★★★★★</div>
-            <div class="testimonial-text">"Absolutely loved my silk saree from Naye Leithe! The quality is outstanding
-                and the colours are exactly as shown. Will definitely order again."</div>
-            <div class="testimonial-author">
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop"
-                    class="testimonial-avatar" alt="avatar">
-                <div>
-                    <div class="testimonial-name">Priya Sharma</div>
-                    <div class="testimonial-loc">Mumbai, India</div>
+    {{ section_header("What Our Customers Say", on_scroll="testimonials-grid") }}
+    <div class="testimonials-grid fade-in" id="testimonials-grid">
+        {% if featured_reviews %}
+            {% for review in featured_reviews %}
+            <div class="testimonial-card">
+                <div class="testimonial-stars">
+                    {% for i in range(review.rating) %}★{% endfor %}
+                    {% for i in range(5 - review.rating) %}☆{% endfor %}
+                </div>
+                <div class="testimonial-text">"{{ review.comment }}"</div>
+                <div class="testimonial-author">
+                    <div class="profile-circle" style="width: 40px; height: 40px; font-size: 14px; margin-right: 12px; background: var(--crimson); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">
+                        {{ (review.customer_name[0] if review.customer_name else (review.user_rel.email[0] if review.user_rel else 'A')).upper() }}
+                    </div>
+                    <div>
+                        <div class="testimonial-name">{{ review.customer_name or (review.user_rel.username if review.user_rel else 'Anonymous') }}</div>
+                        <div class="testimonial-loc">{{ review.customer_location or (review.user_rel.city if review.user_rel else 'India') }}</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="testimonial-card">
-            <div class="testimonial-stars">★★★★★</div>
-            <div class="testimonial-text">"The cord set I ordered was so elegant and the stitching is perfect. Got so
-                many compliments at the party! Fast delivery too."</div>
-            <div class="testimonial-author">
-                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop"
-                    class="testimonial-avatar" alt="avatar">
-                <div>
-                    <div class="testimonial-name">Riya Mehta</div>
-                    <div class="testimonial-loc">Delhi, India</div>
+            {% endfor %}
+        {% else %}
+            <!-- Static fallback reviews -->
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <div class="testimonial-text">"Absolutely loved my silk saree from Naye Leithe! The quality is outstanding and the colours are exactly as shown. Will definitely order again."</div>
+                <div class="testimonial-author">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
+                    <div>
+                        <div class="testimonial-name">Priya Sharma</div>
+                        <div class="testimonial-loc">Mumbai, India</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="testimonial-card">
-            <div class="testimonial-stars">★★★★☆</div>
-            <div class="testimonial-text">"Beautiful jewellery set — the neck piece was perfect for my sister's wedding.
-                Packaging was also very classy."</div>
-            <div class="testimonial-author">
-                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&q=80&fit=crop"
-                    class="testimonial-avatar" alt="avatar">
-                <div>
-                    <div class="testimonial-name">Anjali Gupta</div>
-                    <div class="testimonial-loc">Bangalore, India</div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <div class="testimonial-text">"The cord set I ordered was so elegant and the stitching is perfect. Got so many compliments at the party! Fast delivery too."</div>
+                <div class="testimonial-author">
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
+                    <div>
+                        <div class="testimonial-name">Riya Mehta</div>
+                        <div class="testimonial-loc">Delhi, India</div>
+                    </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
     </div>
 </section>
 
@@ -273,7 +305,8 @@
 
     // Touch support for swiping
     document.addEventListener('DOMContentLoaded', () => {
-        const tracks = document.querySelectorAll('.categories-track, .carousel-track');
+        // Find all tracks including dynamic ones
+        const tracks = document.querySelectorAll('.categories-track, .carousel-track, .testimonials-grid, [id$="-track"]');
 
         tracks.forEach(track => {
             let startX, currentX, initialOffset;
@@ -324,16 +357,19 @@
             track.dataset.cloned = "true";
 
             const container = track.parentElement;
-            const containerWidth = container.offsetWidth;
+            const originalWidth = track.scrollWidth;
+            // Clone multiple times to ensure no gaps
+            for (let i = 0; i < 3; i++) {
+                const clones = Array.from(track.children).map(child => child.cloneNode(true));
+                clones.forEach(clone => track.appendChild(clone));
+            }
             const originalItems = Array.from(track.children);
-            
-            // Only clone if we have items to clone
             if (originalItems.length === 0) return;
 
             // Clone items until we have enough to cover at least 2x the container width
             // Added safety limit to prevent infinite loops
             let safetyLimit = 0;
-            while (track.scrollWidth < containerWidth * 2 && safetyLimit < 10) {
+            while (track.scrollWidth < container.offsetWidth * 2 && safetyLimit < 10) {
                 originalItems.forEach(item => {
                     const clone = item.cloneNode(true);
                     clone.classList.add('is-clone');
@@ -350,12 +386,36 @@
                 const totalWidth = track.scrollWidth;
                 const itemWidth = totalWidth / track.children.length;
                 const originalWidth = originalItems.length * itemWidth;
-                
+
                 if (scrollPos >= originalWidth) {
                     scrollPos -= originalWidth;
                 }
-                
-                // Use scrollLeft on the parent if it's the scrollable container
+
+                // Center pop effect for hero-cards
+                if (selector === '.hero-cards') {
+                    const containerRect = container.getBoundingClientRect();
+                    const centerX = containerRect.left + containerRect.width / 2;
+
+                    Array.from(track.children).forEach(card => {
+                        const cardRect = card.getBoundingClientRect();
+                        const cardCenterX = cardRect.left + cardRect.width / 2;
+                        const dist = Math.abs(centerX - cardCenterX);
+                        const maxDist = containerRect.width / 2;
+
+                        // Scale up if close to center
+                        if (dist < 100) {
+                            const scale = 1 + (1 - dist / 100) * 0.15;
+                            card.style.transform = `scale(${scale})`;
+                            card.style.zIndex = "10";
+                            card.style.borderColor = "var(--crimson)";
+                        } else {
+                            card.style.transform = `scale(1)`;
+                            card.style.zIndex = "1";
+                            card.style.borderColor = "#fff";
+                        }
+                    });
+                }
+
                 if (container.classList.contains('hero-cards') || container.classList.contains('categories-scroll-wrapper')) {
                     container.scrollLeft = scrollPos;
                 } else {
@@ -367,8 +427,17 @@
         }
 
         const isMobile = window.innerWidth <= 768;
-        const catSpeed = isMobile ? 1.8 : 0.8;
-        setupContinuousScroll('.categories-track', catSpeed);
+
+        if (!isMobile) {
+            setupContinuousScroll('.categories-track', 0.8);
+        }
+
+        if (isMobile) {
+            // Wait a bit for images/layout to settle
+            setTimeout(() => {
+                setupContinuousScroll('.hero-cards', 1.5);
+            }, 500);
+        }
 
         // Auto-sliding for other tracks (New Arrivals, Testimonials, Banners)
         function setupAutoSlide(selector, interval = 4000) {
@@ -384,7 +453,7 @@
                 const scrollStep = firstChild.offsetWidth + gap;
 
                 let newScroll = track.scrollLeft + scrollStep;
-                
+
                 if (newScroll >= maxScroll + 10) {
                     track.scrollTo({ left: 0, behavior: 'smooth' });
                 } else {

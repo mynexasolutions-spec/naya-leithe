@@ -51,6 +51,8 @@
                     class="{% if request.endpoint == 'public.blogs' %}active{% endif %}">Blogs</a>
                 <a href="{{ url_for('public.about') }}"
                     class="{% if request.endpoint == 'public.about' %}active{% endif %}">About Us</a>
+                <a href="{{ url_for('public.contact') }}"
+                    class="{% if request.endpoint == 'public.contact' %}active{% endif %}">Contact Us</a>
             </div>
             <div class="nav-actions">
                 <div class="nav-search">
@@ -125,20 +127,20 @@
                 <div class="footer-col">
                     <h4>Help</h4>
                     <a href="#">Track Order</a>
-                    <a href="#">Shipping Policy</a>
-                    <a href="#">Return & Exchange</a>
+                    <a href="{{ url_for('public.shipping') }}">Shipping Policy</a>
+                    <a href="{{ url_for('public.refund') }}">Refund & Cancellation</a>
                     <a href="#">Size Guide</a>
                     <a href="#">FAQ</a>
-                    <a href="#">Contact Us</a>
+                    <a href="{{ url_for('public.contact') }}">Contact Us</a>
                 </div>
                 <div class="footer-col">
                     <h4>Company</h4>
-                    <a href="#">About Us</a>
+                    <a href="{{ url_for('public.about') }}">About Us</a>
                     <a href="#">Our Story</a>
-                    <a href="#">Blog</a>
+                    <a href="{{ url_for('public.blogs') }}">Blog</a>
                     <a href="#">Careers</a>
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
+                    <a href="{{ url_for('public.privacy') }}">Privacy Policy</a>
+                    <a href="{{ url_for('public.terms') }}">Terms & Conditions</a>
                 </div>
             </div>
             <div class="footer-bottom">

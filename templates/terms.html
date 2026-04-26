@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Terms & Conditions – Naye Leithe{% endblock %}
+
+{% block content %}
+<div class="policy-page">
+    <h1>Terms & Conditions</h1>
+    <p class="last-updated">Last updated: April 2024</p>
+
+    <div class="policy-content">
+        <section>
+            <h2>1. Acceptance of Terms</h2>
+            <p>By accessing or using the Naye Leithe website, you agree to be bound by these terms and conditions.</p>
+        </section>
+
+        <section>
+            <h2>2. Product Information</h2>
+            <p>We attempt to be as accurate as possible with product descriptions and images. However, we do not warrant that product descriptions or other content is accurate, complete, or error-free.</p>
+        </section>
+
+        <section>
+            <h2>3. Pricing and Payments</h2>
+            <p>All prices are in INR. We reserve the right to change prices at any time without notice. Payments must be made through our approved payment gateways.</p>
+        </section>
+
+        <section>
+            <h2>4. Intellectual Property</h2>
+            <p>All content included on this site, such as text, graphics, logos, and images, is the property of Naye Leithe or its content suppliers.</p>
+        </section>
+    </div>
+</div>
+
+<style>
+.policy-page {
+    padding: 80px 48px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.policy-page h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    color: var(--crimson);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.last-updated {
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 48px;
+    font-style: italic;
+}
+
+.policy-content section {
+    margin-bottom: 32px;
+}
+
+.policy-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: var(--text);
+}
+
+.policy-content p {
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+    .policy-page {
+        padding: 40px 24px;
+    }
+    .policy-page h1 {
+        font-size: 32px;
+    }
+}
+</style>
+{% endblock %}

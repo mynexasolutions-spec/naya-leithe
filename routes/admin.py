@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, abort, request, flash, jsonify
 from functools import wraps
-from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand
+from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand, Review, Coupon
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
@@ -92,7 +92,8 @@ def products():
 def new_product():
     if request.method == 'POST':
         name = request.form.get('name')
-        price = request.form.get('price').replace('₹', '').strip()
+        price_raw = request.form.get('price', '').replace('₹', '').strip()
+        price = price_raw if price_raw else '0'
         badge = request.form.get('badge')
         sizes = request.form.get('sizes')
         colors = request.form.get('colors')
@@ -140,6 +141,12 @@ def new_product():
         
         # Handle Product Attributes
         selected_attr_ids = request.form.getlist('product_attributes[]')
+        
+        # Validation for Variable Products (BUG-007, BUG-008)
+        if product_type == 'variable' and not selected_attr_ids:
+            flash('Variable products must have at least one attribute selected.', 'error')
+            return redirect(url_for('admin.new_product'))
+
         for attr_id in selected_attr_ids:
             prod_attr = ProductAttribute(product_id=new_id, attribute_id=attr_id)
             db.session.add(prod_attr)
@@ -155,10 +162,14 @@ def new_product():
             
             num_variations = len(v_stocks)
             for i in range(num_variations):
+                # Ensure variation price defaults to main price if empty
+                v_price = v_prices[i].replace('₹', '').strip() if i < len(v_prices) and v_prices[i] else price
+                v_stock = v_stocks[i] if i < len(v_stocks) else 'instock'
+                
                 variation = ProductVariation(
                     product_id=new_id,
-                    price=v_prices[i] if v_prices[i] else product.price,
-                    stock_status=v_stocks[i]
+                    price=f"₹{v_price}",
+                    stock_status=v_stock
                 )
                 db.session.add(variation)
                 db.session.flush() # Get variation ID
@@ -240,10 +251,13 @@ def edit_product(id):
             
             num_variations = len(v_stocks)
             for i in range(num_variations):
+                v_price = v_prices[i].replace('₹', '').strip() if i < len(v_prices) and v_prices[i] else price
+                v_stock = v_stocks[i] if i < len(v_stocks) else 'instock'
+                
                 variation = ProductVariation(
                     product_id=product.id,
-                    price=v_prices[i] if v_prices[i] else product.price,
-                    stock_status=v_stocks[i]
+                    price=f"₹{v_price}",
+                    stock_status=v_stock
                 )
                 db.session.add(variation)
                 db.session.flush() # Get variation ID
@@ -269,6 +283,10 @@ def edit_product(id):
 @admin_bp.route('/admin/product/delete/<id>', methods=['POST'])
 @admin_required
 def delete_product(id):
+    # CSRF Token Check (BUG-001)
+    if request.form.get('csrf_token') != session.get('csrf_token'):
+        abort(403, "CSRF validation failed – token missing")
+        
     product = Product.query.get(id)
     if product:
         # Delete from Cloudinary
@@ -305,6 +323,10 @@ def new_category():
 @admin_bp.route('/admin/category/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_category(id):
+    # CSRF Token Check (BUG-002)
+    if request.form.get('csrf_token') != session.get('csrf_token'):
+        abort(403, "CSRF validation failed – token missing")
+        
     category = Category.query.get(id)
     if category:
         delete_image(category.img)
@@ -331,6 +353,10 @@ def new_subcategory():
 @admin_bp.route('/admin/subcategory/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_subcategory(id):
+    # CSRF Token Check
+    if request.form.get('csrf_token') != session.get('csrf_token'):
+        abort(403, "CSRF validation failed – token missing")
+        
     subcategory = SubCategory.query.get(id)
     if subcategory:
         db.session.delete(subcategory)
@@ -523,6 +549,10 @@ def new_brand():
 @admin_bp.route('/admin/brand/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_brand(id):
+    # CSRF Token Check (BUG-003)
+    if request.form.get('csrf_token') != session.get('csrf_token'):
+        abort(403, "CSRF validation failed – token missing")
+        
     brand = Brand.query.get(id)
     if brand:
         delete_image(brand.logo)
@@ -530,4 +560,121 @@ def delete_brand(id):
         db.session.commit()
         flash('Brand deleted!', 'success')
     return redirect(url_for('admin.brands'))
+
+# --- REVIEW ROUTES ---
+@admin_bp.route('/admin/reviews')
+@admin_required
+def reviews():
+    all_reviews = Review.query.order_by(Review.date.desc()).all()
+    return render_template('admin/reviews.html', reviews=all_reviews)
+
+@admin_bp.route('/admin/review/new', methods=['POST'])
+@admin_required
+def new_review():
+    customer_name = request.form.get('customer_name')
+    customer_location = request.form.get('customer_location')
+    rating = int(request.form.get('rating', 5))
+    comment = request.form.get('comment')
+    is_featured = True if request.form.get('is_featured') == 'on' else False
+    
+    review = Review(
+        customer_name=customer_name,
+        customer_location=customer_location,
+        rating=rating,
+        comment=comment,
+        is_featured=is_featured,
+        status='Approved'
+    )
+    db.session.add(review)
+    db.session.commit()
+    flash('Review added successfully!', 'success')
+    return redirect(url_for('admin.reviews'))
+
+@admin_bp.route('/admin/review/edit/<int:id>', methods=['POST'])
+@admin_required
+def edit_review(id):
+    review = Review.query.get(id)
+    if review:
+        review.customer_name = request.form.get('customer_name')
+        review.customer_location = request.form.get('customer_location')
+        review.rating = int(request.form.get('rating', 5))
+        review.comment = request.form.get('comment')
+        review.is_featured = True if request.form.get('is_featured') == 'on' else False
+        db.session.commit()
+        flash('Review updated successfully!', 'success')
+    return redirect(url_for('admin.reviews'))
+
+@admin_bp.route('/admin/review/status/<int:id>', methods=['POST'])
+@admin_required
+def review_status(id):
+    review = Review.query.get(id)
+    if review:
+        status = request.form.get('status')
+        if status in ['Approved', 'Rejected', 'Pending']:
+            review.status = status
+            db.session.commit()
+            flash(f'Review {status.lower()} successfully!', 'success')
+    return redirect(url_for('admin.reviews'))
+
+@admin_bp.route('/admin/review/toggle-featured/<int:id>', methods=['POST'])
+@admin_required
+def review_toggle_featured(id):
+    review = Review.query.get(id)
+    if review:
+        review.is_featured = not review.is_featured
+        db.session.commit()
+        state = "featured" if review.is_featured else "unfeatured"
+        flash(f'Review marked as {state}!', 'success')
+    return redirect(url_for('admin.reviews'))
+
+@admin_bp.route('/admin/review/delete/<int:id>', methods=['POST'])
+@admin_required
+def delete_review(id):
+    review = Review.query.get(id)
+    if review:
+        db.session.delete(review)
+        db.session.commit()
+        flash('Review deleted!', 'success')
+    return redirect(url_for('admin.reviews'))
+
+# --- COUPON ROUTES ---
+@admin_bp.route('/admin/coupons')
+@admin_required
+def coupons():
+    all_coupons = Coupon.query.all()
+    return render_template('admin/coupons.html', coupons=all_coupons)
+
+@admin_bp.route('/admin/coupon/new', methods=['GET', 'POST'])
+@admin_required
+def new_coupon():
+    if request.method == 'POST':
+        code = request.form.get('code').upper()
+        type = request.form.get('type')
+        discount = float(request.form.get('discount', 0))
+        threshold = float(request.form.get('threshold', 0))
+        usage_limit = int(request.form.get('usage_limit', 1))
+        expiry_date_str = request.form.get('expiry_date')
+        expiry_date = datetime.strptime(expiry_date_str, '%Y-%m-%d') if expiry_date_str else None
+        is_active = True if request.form.get('is_active') == 'on' else False
+
+        coupon = Coupon(
+            code=code, type=type, discount=discount,
+            threshold=threshold, usage_limit=usage_limit,
+            expiry_date=expiry_date, is_active=is_active
+        )
+        db.session.add(coupon)
+        db.session.commit()
+        flash('Coupon created successfully!', 'success')
+        return redirect(url_for('admin.coupons'))
+    return render_template('admin/coupon_form.html')
+
+@admin_bp.route('/admin/coupon/delete/<int:id>', methods=['POST'])
+@admin_required
+def delete_coupon(id):
+    coupon = Coupon.query.get(id)
+    if coupon:
+        db.session.delete(coupon)
+        db.session.commit()
+        flash('Coupon deleted!', 'success')
+    return redirect(url_for('admin.coupons'))
 

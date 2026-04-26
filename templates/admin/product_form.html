@@ -634,22 +634,73 @@
     .variation-item {
         background: #fff;
         border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        margin-bottom: 1rem;
+    }
+    .var-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .var-header span {
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: #1e293b;
+    }
+    .btn-remove {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #64748b;
+        font-size: 18px;
+        transition: all 0.2s;
+    }
+    .btn-remove:hover {
+        background: #fee2e2;
+        color: #ef4444;
+        border-color: #fecaca;
     }
     .var-body {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 1rem;
-        align-items: end;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        align-items: start;
+    }
+    .var-attr-select, .var-price-input, .var-stock-select {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
     .var-body label {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
-        color: #64748b;
-        margin-bottom: 4px;
-        display: block;
+        color: #94a3b8;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        margin-bottom: 0;
+    }
+    .var-body input, .var-body select {
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 0.95rem;
+        color: #1e293b;
+        width: 100%;
+        transition: border-color 0.2s;
+    }
+    .var-body input:focus, .var-body select:focus {
+        border-color: #8b1a2a;
+        box-shadow: 0 0 0 3px rgba(139, 26, 42, 0.05);
     }
 </style>
 {% endblock %}

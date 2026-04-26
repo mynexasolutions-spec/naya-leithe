@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1>Coupons & Discounts</h1>
+        <p>Create and manage promotional codes for your store.</p>
+    </div>
+    <a href="{{ url_for('admin.new_coupon') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Create New Coupon</a>
+</div>
+
+<div class="section-card">
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Coupon Name</th>
+                    <th>Type</th>
+                    <th>Discount</th>
+                    <th>Threshold Order Value</th>
+                    <th>Max Usage per User</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for coupon in coupons %}
+                <tr>
+                    <td><strong style="color: #8b1a2a;">{{ coupon.code }}</strong></td>
+                    <td>{{ 'Percentage' if coupon.type == 'percentage' else 'Flat Rate' }}</td>
+                    <td>{{ coupon.discount }}{{ '%' if coupon.type == 'percentage' else ' ₹' }}</td>
+                    <td>₹{{ coupon.threshold }}</td>
+                    <td>{{ coupon.usage_limit }} per user</td>
+                    <td>{{ coupon.expiry_date.strftime('%d %b, %Y') if coupon.expiry_date else 'No Expiry' }}</td>
+                    <td>
+                        <span class="status-badge {{ 'approved' if coupon.is_active else 'rejected' }}">
+                            {{ 'Active' if coupon.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="table-actions">
+                            <form action="{{ url_for('admin.delete_coupon', id=coupon.id) }}" method="POST" onsubmit="return confirm('Delete this coupon?')">
+                                <button type="submit" class="btn-icon text-danger"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

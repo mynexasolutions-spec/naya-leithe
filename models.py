@@ -148,3 +148,27 @@ class Brand(db.Model):
     def __repr__(self):
         return f"<Brand {self.name}>"
 
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    customer_name = db.Column(db.String(100))
+    customer_location = db.Column(db.String(100))
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='Approved')
+    is_featured = db.Column(db.Boolean, default=False)
+    product = db.relationship('Product', backref=db.backref('reviews', lazy=True))
+    user_rel = db.relationship('User', backref=db.backref('reviews', lazy=True))
+
+class Coupon(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(50), unique=True, nullable=False)
+    type = db.Column(db.String(20), nullable=False) # 'flat', 'percentage'
+    discount = db.Column(db.Float, nullable=False)
+    threshold = db.Column(db.Float, default=0.0)
+    usage_limit = db.Column(db.Integer, default=1)
+    expiry_date = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+

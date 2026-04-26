@@ -2,27 +2,140 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Add New Brand</h1>
-    <p>Create a new brand for your products.</p>
+    <div class="header-content">
+        <h1>Add New Brand</h1>
+        <p>Create a new brand for your products.</p>
+    </div>
 </div>
 
-<div class="section-card" style="max-width: 600px;">
+<div class="section-card" style="max-width: 700px;">
     <form action="{{ url_for('admin.new_brand') }}" method="POST" enctype="multipart/form-data" class="admin-form">
-        <div class="form-group">
-            <label>Brand Name</label>
-            <input type="text" name="name" placeholder="e.g. Nike, Zara, Handloom India" required>
-        </div>
-        
-        <div class="form-group">
-            <label>Brand Logo</label>
-            <input type="file" name="logo" accept="image/*">
-            <p class="form-hint">Upload a high-quality logo for the brand.</p>
+        <div class="form-grid-single">
+            <div class="form-group">
+                <label>Brand Name</label>
+                <input type="text" name="name" placeholder="e.g. Nike, Zara, Handloom India" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Brand Logo</label>
+                <div class="file-upload-wrapper">
+                    <input type="file" name="logo" id="brandLogo" accept="image/*" onchange="previewLogo(this)">
+                    <div class="file-upload-design">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Click to upload or drag and drop</span>
+                        <p>High-quality logo (PNG, JPG, SVG)</p>
+                    </div>
+                </div>
+                <div id="logoPreviewContainer" style="display: none; margin-top: 1.5rem; text-align: center;">
+                    <img id="logoPreview" src="#" alt="Logo Preview" style="max-height: 100px; border-radius: 8px; border: 1px solid #e2e8f0; padding: 10px;">
+                </div>
+            </div>
         </div>
 
-        <div class="form-actions" style="margin-top: 2rem;">
+        <div class="form-actions" style="margin-top: 3rem; justify-content: flex-start;">
             <button type="submit" class="btn btn-primary">Save Brand</button>
             <a href="{{ url_for('admin.brands') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>
+
+<style>
+    .form-grid-single {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .file-upload-wrapper {
+        position: relative;
+        width: 100%;
+        height: 150px;
+        border: 2px dashed #e2e8f0;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .file-upload-wrapper:hover {
+        border-color: #8b1a2a;
+        background: #fff5f6;
+    }
+
+    .file-upload-wrapper input[type="file"] {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        z-index: 2;
+    }
+
+    .file-upload-design {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .file-upload-design i {
+        font-size: 2rem;
+        color: #94a3b8;
+        transition: color 0.3s;
+    }
+
+    .file-upload-wrapper:hover .file-upload-design i {
+        color: #8b1a2a;
+    }
+
+    .file-upload-design span {
+        font-weight: 600;
+        color: #475569;
+    }
+
+    .file-upload-design p {
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.8rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: #334155;
+    }
+
+    .form-group input[type="text"] {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 1rem;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .form-group input[type="text"]:focus {
+        border-color: #8b1a2a;
+        box-shadow: 0 0 0 4px rgba(139, 26, 42, 0.05);
+    }
+</style>
+
+<script>
+    function previewLogo(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('logoPreview').src = e.target.result;
+                document.getElementById('logoPreviewContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>
 {% endblock %}

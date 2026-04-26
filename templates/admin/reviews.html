@@ -1,0 +1,213 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1>Customer Reviews</h1>
+        <p>Manage and curate customer testimonials for your homepage.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openReviewModal()"><i class="fas fa-plus"></i> Add New Review</button>
+</div>
+
+<div class="section-card reviews-container">
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Rating</th>
+                    <th>Comment</th>
+                    <th>Featured</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for review in reviews %}
+                <tr>
+                    <td>
+                        <div class="customer-info">
+                            <span class="customer-name">{{ review.customer_name or 'Anonymous' }}</span>
+                            <span class="customer-location">{{ review.customer_location or '-' }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="rating-stars">
+                            {% for i in range(review.rating) %}★{% endfor %}
+                            {% for i in range(5 - review.rating) %}☆{% endfor %}
+                        </div>
+                    </td>
+                    <td class="comment-cell">
+                        <div class="comment-text" title="{{ review.comment }}">
+                            {{ review.comment[:80] }}{{ '...' if review.comment|length > 80 }}
+                        </div>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.review_toggle_featured', id=review.id) }}" method="POST">
+                            <label class="switch">
+                                <input type="checkbox" onchange="this.form.submit()" {{ 'checked' if review.is_featured }}>
+                                <span class="slider round"></span>
+                            </label>
+                        </form>
+                    </td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn-icon text-primary" onclick="openReviewModal({{ review.id }}, '{{ review.customer_name|replace("'", "\\'") }}', '{{ review.customer_location|replace("'", "\\'") }}', {{ review.rating }}, '{{ review.comment|replace("'", "\\'")|replace("\n", " ") }}', {{ 'true' if review.is_featured else 'false' }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form action="{{ url_for('admin.delete_review', id=review.id) }}" method="POST" onsubmit="return confirm('Delete this review?')" style="display: inline;">
+                                <button type="submit" class="btn-icon text-danger"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Review Modal -->
+<div id="reviewModal" class="admin-modal">
+    <div class="modal-content section-card">
+        <div class="modal-header">
+            <h3 id="modalTitle">Add New Review</h3>
+            <button class="close-btn" onclick="closeReviewModal()">&times;</button>
+        </div>
+        <form id="reviewForm" action="{{ url_for('admin.new_review') }}" method="POST" class="admin-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Customer Name</label>
+                    <input type="text" name="customer_name" id="field_name" placeholder="e.g. Priya Sharma" required>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" name="customer_location" id="field_location" placeholder="e.g. Mumbai, India">
+                </div>
+                <div class="form-group">
+                    <label>Rating (1-5)</label>
+                    <select name="rating" id="field_rating">
+                        <option value="5">5 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="2">2 Stars</option>
+                        <option value="1">1 Star</option>
+                    </select>
+                </div>
+                <div class="form-group toggle-group">
+                    <label>Feature on Homepage</label>
+                    <label class="switch">
+                        <input type="checkbox" name="is_featured" id="field_featured">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="form-group full-width">
+                    <label>Review Comment</label>
+                    <textarea name="comment" id="field_comment" rows="4" placeholder="What did the customer say?" required></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="submitBtn">Save Review</button>
+                <button type="button" class="btn btn-secondary" onclick="closeReviewModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .customer-info { display: flex; flex-direction: column; }
+    .customer-name { font-weight: 700; color: #1e293b; }
+    .customer-location { font-size: 0.8rem; color: #64748b; }
+    
+    .rating-stars { color: #fbbf24; font-size: 0.9rem; }
+    .comment-cell { min-width: 300px; }
+    .comment-text { font-size: 0.85rem; color: #475569; line-height: 1.5; }
+
+    /* Modal Styling */
+    .admin-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0; top: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.4);
+        backdrop-filter: blur(4px);
+    }
+    .modal-content {
+        position: relative;
+        margin: 5% auto;
+        width: 90%;
+        max-width: 600px;
+        animation: slideDown 0.3s ease;
+    }
+    @keyframes slideDown {
+        from { transform: translateY(-30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .full-width { grid-column: span 2; }
+    .toggle-group { display: flex; align-items: center; gap: 12px; padding-top: 1.5rem; }
+    .toggle-group label:first-child { margin-bottom: 0; font-weight: 600; }
+
+    /* Switch Styling */
+    .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #8b1a2a; }
+    input:checked + .slider:before { transform: translateX(14px); }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .full-width { grid-column: span 1; }
+        .comment-cell { min-width: 200px; }
+        .modal-content { margin: 10% auto; padding: 1.5rem; }
+    }
+</style>
+
+<script>
+    function openReviewModal(id = null, name = '', location = '', rating = 5, comment = '', featured = false) {
+        const modal = document.getElementById('reviewModal');
+        const form = document.getElementById('reviewForm');
+        const title = document.getElementById('modalTitle');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (id) {
+            title.innerText = 'Edit Review';
+            form.action = `/admin/review/edit/${id}`;
+            submitBtn.innerText = 'Update Review';
+        } else {
+            title.innerText = 'Add New Review';
+            form.action = "{{ url_for('admin.new_review') }}";
+            submitBtn.innerText = 'Save Review';
+        }
+
+        document.getElementById('field_name').value = name;
+        document.getElementById('field_location').value = location;
+        document.getElementById('field_rating').value = rating;
+        document.getElementById('field_comment').value = comment;
+        document.getElementById('field_featured').checked = featured;
+
+        modal.style.display = 'block';
+    }
+
+    function closeReviewModal() {
+        document.getElementById('reviewModal').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('reviewModal');
+        if (event.target == modal) closeReviewModal();
+    }
+</script>
+{% endblock %}

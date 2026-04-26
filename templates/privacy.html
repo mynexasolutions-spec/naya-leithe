@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy – Naye Leithe{% endblock %}
+
+{% block content %}
+<div class="policy-page">
+    <h1>Privacy Policy</h1>
+    <p class="last-updated">Last updated: April 2024</p>
+
+    <div class="policy-content">
+        <section>
+            <h2>1. Introduction</h2>
+            <p>Welcome to Naye Leithe. We respect your privacy and want to protect your personal information. To learn more, please read this Privacy Policy.</p>
+        </section>
+
+        <section>
+            <h2>2. Information We Collect</h2>
+            <p>We collect information you provide directly to us when you create an account, make a purchase, or communicate with us. This includes your name, email address, shipping address, and payment information.</p>
+        </section>
+
+        <section>
+            <h2>3. How We Use Your Information</h2>
+            <p>We use the information we collect to fulfill your orders, provide customer support, and send you marketing communications if you have opted in.</p>
+        </section>
+
+        <section>
+            <h2>4. Data Security</h2>
+            <p>We implement a variety of security measures to maintain the safety of your personal information when you place an order or enter, submit, or access your personal information.</p>
+        </section>
+    </div>
+</div>
+
+<style>
+.policy-page {
+    padding: 80px 48px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.policy-page h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    color: var(--crimson);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.last-updated {
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 48px;
+    font-style: italic;
+}
+
+.policy-content section {
+    margin-bottom: 32px;
+}
+
+.policy-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: var(--text);
+}
+
+.policy-content p {
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+    .policy-page {
+        padding: 40px 24px;
+    }
+    .policy-page h1 {
+        font-size: 32px;
+    }
+}
+</style>
+{% endblock %}

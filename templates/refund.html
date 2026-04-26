@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Cancellation & Refund Policy – Naye Leithe{% endblock %}
+
+{% block content %}
+<div class="policy-page">
+    <h1>Cancellation & Refund Policy</h1>
+    <p class="last-updated">Last updated: April 2024</p>
+
+    <div class="policy-content">
+        <section>
+            <h2>1. Cancellation Policy</h2>
+            <p>You can cancel your order within 12 hours of placing it. Once the order has been shipped, it cannot be cancelled.</p>
+        </section>
+
+        <section>
+            <h2>2. Returns & Exchange</h2>
+            <p>We offer a 7-day return policy. Items must be unworn, unwashed, and in their original packaging with tags intact.</p>
+        </section>
+
+        <section>
+            <h2>3. Refund Process</h2>
+            <p>Once we receive and inspect your return, we will notify you of the approval or rejection of your refund. Approved refunds will be processed within 5-7 business days to your original payment method.</p>
+        </section>
+
+        <section>
+            <h2>4. Non-Returnable Items</h2>
+            <p>Items on clearance sale and personalized items are not eligible for returns or refunds unless they arrive damaged.</p>
+        </section>
+    </div>
+</div>
+
+<style>
+.policy-page {
+    padding: 80px 48px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.policy-page h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    color: var(--crimson);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.last-updated {
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 48px;
+    font-style: italic;
+}
+
+.policy-content section {
+    margin-bottom: 32px;
+}
+
+.policy-content h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: var(--text);
+}
+
+.policy-content p {
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+    .policy-page {
+        padding: 40px 24px;
+    }
+    .policy-page h1 {
+        font-size: 32px;
+    }
+}
+</style>
+{% endblock %}
