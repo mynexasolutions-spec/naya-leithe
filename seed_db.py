@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from models import db, Category, Product, SubCategory
+from models import *
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -81,6 +81,30 @@ with app.app_context():
     
     db.session.commit()
     
+    # Add Attributes
+    size_attr = Attribute(name="Size", slug="size", type="select")
+    color_attr = Attribute(name="Color", slug="color", type="color")
+    db.session.add_all([size_attr, color_attr])
+    db.session.flush()
+
+    # Add Values
+    sizes = ["S", "M", "L", "XL"]
+    colors = [("Red", "#ff0000"), ("Blue", "#0000ff"), ("Green", "#00ff00"), ("Black", "#000000")]
+    
+    size_vals = []
+    for s in sizes:
+        val = AttributeValue(attribute_id=size_attr.id, value=s)
+        db.session.add(val)
+        size_vals.append(val)
+        
+    color_vals = []
+    for c_name, c_code in colors:
+        val = AttributeValue(attribute_id=color_attr.id, value=c_name)
+        db.session.add(val)
+        color_vals.append(val)
+    
+    db.session.flush()
+
     # Add Products
     for p in all_products:
         category = cat_map.get(p['cat'])
@@ -97,9 +121,29 @@ with app.app_context():
             img=p['img'],
             is_featured=p.get('is_featured', False),
             sizes="S, M, L, XL",
-            size_chart="https://www.sizeguide.net/wp-content/uploads/2014/11/women-clothing-size-chart.jpg"
+            size_chart="https://www.sizeguide.net/wp-content/uploads/2014/11/women-clothing-size-chart.jpg",
+            product_type="variable" if p.get('is_featured') else "simple"
         )
         db.session.add(product)
-    
+        db.session.flush()
+
+        # Link Attributes
+        if product.product_type == "variable":
+            db.session.add(ProductAttribute(product_id=product.id, attribute_id=size_attr.id))
+            db.session.add(ProductAttribute(product_id=product.id, attribute_id=color_attr.id))
+            
+            # Create a couple of variations for featured products
+            for i in range(2):
+                v = ProductVariation(
+                    product_id=product.id,
+                    price=product.price,
+                    stock_status="instock"
+                )
+                db.session.add(v)
+                db.session.flush()
+                # Link options (Size + Color)
+                db.session.add(VariationOption(variation_id=v.id, attribute_value_id=size_vals[i].id))
+                db.session.add(VariationOption(variation_id=v.id, attribute_value_id=color_vals[i].id))
+
     db.session.commit()
     print("Database structure updated with 9+ demo products!")

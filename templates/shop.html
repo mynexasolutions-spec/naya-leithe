@@ -1,36 +1,6 @@
 {% extends "base.html" %}
 
-{% macro product_card(product) %}
-<div class="product-card">
-    <div class="product-img-wrap">
-        <a href="/product/{{ product.id }}">
-            <img src="{{ product.img }}" alt="{{ product.name }}" loading="lazy">
-        </a>
-        {% if product.badge %}
-        <span class="product-badge {{ product.badge.lower() }}">
-            {{ product.badge }}
-        </span>
-        {% endif %}
-        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}" onclick="toggleWishlist(event, '{{ product.id }}')">
-            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist" alt="wishlist">
-        </div>
-    </div>
-    <div class="product-info">
-        <div class="product-category">
-            {{ product.category.name if product.category else product.cat_name }}
-            {% if product.subcategory %}
-            / {{ product.subcategory.name }}
-            {% endif %}
-        </div>
-        <div class="product-name">{{ product.name }}</div>
-        <div class="product-prices">
-            <span class="product-price">{{ product.price }}</span>
-            <span class="product-price-original">{{ product.orig }}</span>
-        </div>
-        <button class="product-add-btn">Add to Cart</button>
-    </div>
-</div>
-{% endmacro %}
+{% from "macros.html" import product_card %}
 
 {% block content %}
 <div class="shop-page">

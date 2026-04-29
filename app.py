@@ -17,6 +17,7 @@ from routes.admin import admin_bp
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-for-naye-leithe')
+app.jinja_env.add_extension('jinja2.ext.do')
 
 # Database Configuration
 db_url = os.getenv('DATABASE_URL')

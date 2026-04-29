@@ -29,7 +29,7 @@
                         <tr>
                             <td class="product-cell">
                                 <div class="cart-prod-info">
-                                    <img src="{{ item.product.img }}" alt="{{ item.product.name }}">
+                                    <img src="{{ item.var_img or item.product.img }}" alt="{{ item.product.name }}">
                                     <div>
                                          <div class="cart-prod-cat">{{ item.product.cat_name }}</div>
                                          <div class="cart-prod-name">{{ item.product.name }}</div>
@@ -42,7 +42,7 @@
                                      </div>
                                 </div>
                             </td>
-                            <td>{{ item.product.price }}</td>
+                            <td>{{ item.display_price }}</td>
                             <td>
                                 <form action="{{ url_for('cart.update_cart', id=item.id) }}" method="POST" class="qty-form">
                                     <div class="qty-control">

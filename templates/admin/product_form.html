@@ -49,7 +49,8 @@
                 <select name="brand_id">
                     <option value="">Select Brand...</option>
                     {% for brand in brands %}
-                    <option value="{{ brand.id }}" {{ 'selected' if product and product.brand_id == brand.id }}>{{ brand.name }}</option>
+                    <option value="{{ brand.id }}" {{ 'selected' if product and product.brand_id==brand.id }}>{{
+                        brand.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -87,31 +88,42 @@
             </div>
 
             <!-- ATTRIBUTE SELECTION -->
-            <div id="attributeSelectionSection" class="form-group full-width" style="display: {{ 'block' if product and product.product_type == 'variable' else 'none' }};">
-                <label>Select Product Attributes</label>
-                <p class="form-hint" style="margin-bottom: 1rem;">Choose which attributes (e.g. Size, Color, Fabric) apply to this product.</p>
-                <div class="attributes-selection-grid">
+            <div id="attributeSelectionSection" class="form-group full-width"
+                style="display: {{ 'block' if product and product.product_type == 'variable' else 'none' }};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label style="margin-bottom: 0;">Select Product Attributes</label>
+                    <button type="button" onclick="openNewAttrModal()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">+ Add New Attribute</button>
+                </div>
+                <p class="form-hint" style="margin-bottom: 1rem;">Choose which attributes (e.g. Size, Color, Fabric)
+                    apply to this product.</p>
+                <div class="attributes-selection-grid" id="mainAttributesGrid">
                     {% for attr in attributes %}
-                    <div class="attr-selection-row-container" style="margin-bottom: 1.5rem; border: 1px solid #f1f5f9; padding: 1rem; border-radius: 12px;">
-                        <div class="attr-selection-row" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                            <label class="attr-checkbox-item" style="display: flex; align-items: center; gap: 10px; font-weight: 700;">
-                                <input type="checkbox" name="product_attributes[]" value="{{ attr.id }}" 
-                                    {% if product and attr.id in product.attributes|map(attribute='attribute_id') %}checked{% endif %}
-                                    onchange="toggleAttrValues({{ attr.id }})">
+                    <div class="attr-selection-row-container"
+                        style="margin-bottom: 1.5rem; border: 1px solid #f1f5f9; padding: 1rem; border-radius: 12px;">
+                        <div class="attr-selection-row"
+                            style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 10px;">
+                            <label class="attr-checkbox-item"
+                                style="display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                                <input type="checkbox" name="product_attributes[]" value="{{ attr.id }}" {% if product
+                                    and attr.id in product.attributes|map(attribute='attribute_id' ) %}checked{% endif
+                                    %} onchange="toggleAttrValues({{ attr.id }})">
                                 <span class="attr-name">{{ attr.name }}</span>
                             </label>
-                            <div class="quick-add-value">
-                                <input type="text" id="quick_add_{{ attr.id }}" placeholder="New {{ attr.name }}...">
-                                <button type="button" onclick="quickAddValue({{ attr.id }})">Add</button>
+                            <div class="quick-add-value" style="display: flex; gap: 5px;">
+                                <input type="text" id="quick_add_{{ attr.id }}" placeholder="New {{ attr.name }}..." style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 140px;">
+                                <button type="button" onclick="quickAddValue({{ attr.id }})" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px;">Add</button>
                             </div>
                         </div>
-                        
-                        <div id="attr_values_{{ attr.id }}" class="attr-values-grid" style="display: {{ 'flex' if product and attr.id in product.attributes|map(attribute='attribute_id') else 'none' }}; flex-wrap: wrap; gap: 15px; padding: 10px; background: #fcfcfc; border-radius: 8px; margin-top: 10px;">
+
+                        <div id="attr_values_{{ attr.id }}" class="attr-values-grid"
+                            style="display: {{ 'flex' if product and attr.id in product.attributes|map(attribute='attribute_id') else 'none' }}; flex-wrap: wrap; gap: 15px; padding: 10px; background: #fcfcfc; border-radius: 8px; margin-top: 10px;">
                             {% for val in attr.values %}
-                            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; background: white; border: 1px solid #edf2f7; border-radius: 20px; transition: all 0.2s;">
+                            <label
+                                style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; background: white; border: 1px solid #edf2f7; border-radius: 20px; transition: all 0.2s;">
                                 <input type="checkbox" name="attr_val_{{ attr.id }}[]" value="{{ val.id }}"
-                                    style="width: 16px; height: 16px;"
-                                    {% if product and val.id in product.variations|map(attribute='options')|sum(start=[])|map(attribute='attribute_value_id') %}checked{% endif %}>
+                                    style="width: 16px; height: 16px;" {% if product and val.id in
+                                    product.variations|map(attribute='options'
+                                    )|sum(start=[])|map(attribute='attribute_value_id' ) %}checked{% endif %}>
                                 <span style="font-weight: 500;">{{ val.value }}</span>
                             </label>
                             {% endfor %}
@@ -119,6 +131,38 @@
                     </div>
                     {% endfor %}
                 </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Main Product Image</label>
+                {% if product and product.img %}
+                <div class="current-img-preview product-img">
+                    <img src="{{ product.img }}" alt="Product Image">
+                    <span>Current Image</span>
+                </div>
+                {% endif %}
+                <input type="file" name="img" accept="image/*" {{ 'required' if not product }}>
+                <p class="form-hint">Select the primary image for this product.</p>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Product Gallery (Secondary Images)</label>
+                <p class="form-hint">Upload additional images for the product gallery.</p>
+                <input type="file" name="gallery[]" multiple accept="image/*" class="admin-input">
+                {% if product and product.images %}
+                <div class="gallery-preview-grid" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 1rem;">
+                    {% for p_img in product.images %}
+                    <div class="gallery-preview-item" style="position: relative; border: 1px solid #e2e8f0; padding: 5px; border-radius: 8px;">
+                        <img src="{{ p_img.img_url }}" alt="Gallery" style="width: 70px; height: 70px; object-fit: cover; border-radius: 4px;">
+                        <div style="text-align: center; margin-top: 5px;">
+                            <label style="font-size: 0.65rem; color: #ef4444; cursor: pointer;">
+                                <input type="checkbox" name="remove_gallery[]" value="{{ p_img.id }}"> Remove
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="form-group">
@@ -132,30 +176,42 @@
                 <input type="file" name="size_chart" accept="image/*">
                 <p class="form-hint">Upload an image of the size chart.</p>
             </div>
-            <div class="form-group full-width">
-                <label>Main Product Image</label>
-                {% if product and product.img %}
-                <div class="current-img-preview product-img">
-                    <img src="{{ product.img }}" alt="Product Image">
-                    <span>Current Image</span>
-                </div>
-                {% endif %}
-                <input type="file" name="img" accept="image/*" {{ 'required' if not product }}>
-                <p class="form-hint">Select the primary image for this product.</p>
-            </div>
+
             <div class="form-group full-width">
                 <label>Description</label>
                 <textarea name="desc" rows="4"
                     placeholder="Describe your product...">{{ product.desc if product }}</textarea>
             </div>
-        </div>
-
-        <div id="variationsSection"
+        </div>        <div id="variationsSection"
             style="display: {{ 'block' if product and product.product_type == 'variable' else 'none' }}; margin-top: 2rem; border-top: 2px solid #f1f5f9; padding-top: 2rem;">
-            <h3>Product Variations</h3>
-            <p class="form-hint" style="margin-bottom: 1.5rem;">Define specific combinations of selected attributes and their price/stock.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                    <h3 style="margin-bottom: 0.25rem;">Product Variations</h3>
+                    <p class="form-hint">Define specific combinations of selected attributes and their price/stock.</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn btn-secondary" onclick="generateAllVariations()" style="background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe;">
+                        <i class="fas fa-magic"></i> Generate All Combinations
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="addVariation()">+ Add Manual</button>
+                </div>
+            </div>
+
+            <div class="bulk-actions" style="background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 20px;">
+                <span style="font-size: 0.85rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Bulk Update:</span>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="bulk_price" placeholder="Price" style="width: 100px; padding: 6px;">
+                    <select id="bulk_stock" style="width: 120px; padding: 6px;">
+                        <option value="">Stock Status</option>
+                        <option value="instock">In Stock</option>
+                        <option value="outofstock">Out of Stock</option>
+                    </select>
+                    <button type="button" onclick="applyBulkUpdate()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">Apply to All</button>
+                </div>
+            </div>
 
             <div id="variationsList" class="variations-grid">
+                <!-- Variations will be injected here -->
                 {% if product and product.variations %}
                 {% for var in product.variations %}
                 <div class="variation-item card">
@@ -171,11 +227,9 @@
                             <select name="var_attr_{{ p_attr.attribute.id }}[]">
                                 {% for val in p_attr.attribute.values %}
                                 <option value="{{ val.id }}" 
-                                    {% if var.id in var.options|map(attribute='variation_id') %}
-                                        {% for opt in var.options if opt.attribute_value.attribute_id == p_attr.attribute.id %}
-                                            {% if opt.attribute_value_id == val.id %}selected{% endif %}
-                                        {% endfor %}
-                                    {% endif %}>
+                                    {% for opt in var.options if opt.attribute_value.attribute_id == p_attr.attribute.id %}
+                                        {% if opt.attribute_value_id == val.id %}selected{% endif %}
+                                    {% endfor %}>
                                     {{ val.value }}
                                 </option>
                                 {% endfor %}
@@ -184,7 +238,7 @@
                         {% endfor %}
                         <div class="var-price-input">
                             <label>Price</label>
-                            <input type="text" name="var_price[]" value="{{ var.price or '' }}" placeholder="Price (Optional)">
+                            <input type="text" name="var_price[]" value="{{ var.price.replace('₹', '') or '' }}" placeholder="Price (Optional)">
                         </div>
                         <div class="var-stock-select">
                             <label>Stock</label>
@@ -193,15 +247,26 @@
                                 <option value="outofstock" {{ 'selected' if var.stock_status=='outofstock' }}>Out of Stock</option>
                             </select>
                         </div>
+                        <div class="var-img-input">
+                            <label>Image</label>
+                            <input type="file" name="var_img_{{ loop.index }}">
+                            <input type="hidden" name="var_idx[]" value="{{ loop.index }}">
+                            {% if var.img_url %}
+                            <div class="var-img-preview" style="margin-top: 5px;">
+                                <img src="{{ var.img_url }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                <input type="hidden" name="var_existing_img[]" value="{{ var.img_url }}">
+                            </div>
+                            {% else %}
+                                <input type="hidden" name="var_existing_img[]" value="">
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
                 {% endif %}
             </div>
-
-            <button type="button" class="btn btn-secondary" style="margin-top: 1rem;" onclick="addVariation()">+ Add
-                Variation</button>
         </div>
+
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">{{ 'Update Product' if product else 'Save Product' }}</button>
             <a href="{{ url_for('admin.products') }}" class="btn btn-secondary">Cancel</a>
@@ -209,19 +274,96 @@
     </form>
 </div>
 
+<!-- NEW ATTRIBUTE MODAL -->
+<div id="newAttrModal" class="modal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);">
+    <div class="modal-content" style="background:#fff; margin:10% auto; padding:2rem; border-radius:16px; width:90%; max-width:500px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <h3 style="margin:0;">Add New Attribute</h3>
+            <button type="button" onclick="closeNewAttrModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;">&times;</button>
+        </div>
+        <form id="newAttrForm">
+            <div class="form-group">
+                <label class="admin-label">Attribute Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Fabric or Sleeve" class="admin-input" style="width:100%;">
+            </div>
+            <div class="form-group">
+                <label class="admin-label">Attribute Slug (Optional)</label>
+                <input type="text" name="slug" placeholder="e.g. fabric" class="admin-input" style="width:100%;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:1.5rem;">
+                <button type="button" onclick="closeNewAttrModal()" class="admin-btn">Cancel</button>
+                <button type="submit" class="admin-btn btn-primary">Create Attribute</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     // Store attributes and their values for JS
     const allAttributes = {
         {% for attr in attributes %}
-        "{{ attr.id }}": {
-            "name": "{{ attr.name }}",
+    "{{ attr.id }}": {
+        "name": "{{ attr.name }}",
             "values": [
                 {% for val in attr.values %}
-                {"id": "{{ val.id }}", "value": "{{ val.value }}"},
-                {% endfor %}
+    { "id": "{{ val.id }}", "value": "{{ val.value }}" },
+    {% endfor %}
             ]
         },
-        {% endfor %}
+    {% endfor %}
+    };
+
+    function openNewAttrModal() {
+        document.getElementById('newAttrModal').style.display = 'block';
+    }
+    function closeNewAttrModal() {
+        document.getElementById('newAttrModal').style.display = 'none';
+        document.getElementById('newAttrForm').reset();
+    }
+
+    document.getElementById('newAttrForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch("{{ url_for('admin.admin_attribute_new') }}", {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                // Add to the grid
+                const grid = document.getElementById('mainAttributesGrid');
+                const div = document.createElement('div');
+                div.className = 'attr-selection-row-container';
+                div.style = 'margin-bottom: 1.5rem; border: 1px solid #f1f5f9; padding: 1rem; border-radius: 12px;';
+                div.innerHTML = `
+                    <div class="attr-selection-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 10px;">
+                        <label class="attr-checkbox-item" style="display: flex; align-items: center; gap: 10px; font-weight: 700;">
+                            <input type="checkbox" name="product_attributes[]" value="${data.id}" checked onchange="toggleAttrValues(${data.id})">
+                            <span class="attr-name">${data.name}</span>
+                        </label>
+                        <div class="quick-add-value" style="display: flex; gap: 5px;">
+                            <input type="text" id="quick_add_${data.id}" placeholder="New ${data.name}..." style="padding: 6px 12px; font-size: 0.85rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 140px;">
+                            <button type="button" onclick="quickAddValue(${data.id})" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px;">Add</button>
+                        </div>
+                    </div>
+                    <div id="attr_values_${data.id}" class="attr-values-grid" style="display: flex; flex-wrap: wrap; gap: 15px; padding: 10px; background: #fcfcfc; border-radius: 8px; margin-top: 10px;">
+                    </div>
+                `;
+                grid.appendChild(div);
+                
+                // Update allAttributes global for JS usage
+                allAttributes[data.id] = { id: data.id, name: data.name, values: [] };
+                
+                closeNewAttrModal();
+            }
+        } catch (err) {
+            console.error("Error creating attribute:", err);
+            alert("Failed to create attribute.");
+        }
     };
 
     function applyPreset(select, inputId) {
@@ -238,7 +380,7 @@
         const type = document.getElementById('productType').value;
         const varSection = document.getElementById('variationsSection');
         const attrSection = document.getElementById('attributeSelectionSection');
-        
+
         if (type === 'variable') {
             varSection.style.display = 'block';
             attrSection.style.display = 'block';
@@ -263,7 +405,7 @@
     function addVariation() {
         const selectedAttrIds = Array.from(document.querySelectorAll('input[name="product_attributes[]"]:checked'))
             .map(cb => cb.value);
-        
+
         if (selectedAttrIds.length === 0) {
             alert("Please select at least one attribute first.");
             return;
@@ -272,20 +414,20 @@
         const list = document.getElementById('variationsList');
         const div = document.createElement('div');
         div.className = 'variation-item card';
-        
+
         let attrHtml = '';
         selectedAttrIds.forEach(id => {
             const attr = allAttributes[id];
             let optionsHtml = '';
             const checkedValues = Array.from(document.querySelectorAll(`input[name="attr_val_${id}[]"]:checked`))
                 .map(cb => cb.value);
-            
+
             attr.values.forEach(val => {
                 if (checkedValues.includes(val.id.toString())) {
                     optionsHtml += `<option value="${val.id}">${val.value}</option>`;
                 }
             });
-            
+
             attrHtml += `
                 <div class="var-attr-select">
                     <label>${attr.name}</label>
@@ -296,10 +438,12 @@
             `;
         });
 
+        const idx = Date.now() + Math.round(Math.random() * 1000);
         div.innerHTML = `
             <div class="var-header">
                 <span>New Variation</span>
                 <button type="button" class="btn-remove" onclick="this.closest('.variation-item').remove()">&times;</button>
+                <input type="hidden" name="var_idx[]" value="${idx}">
             </div>
             <div class="var-body">
                 ${attrHtml}
@@ -314,9 +458,125 @@
                         <option value="outofstock">Out of Stock</option>
                     </select>
                 </div>
+                <div class="var-img-input">
+                    <label>Image</label>
+                    <input type="file" name="var_img_${idx}">
+                    <input type="hidden" name="var_existing_img[]" value="">
+                </div>
             </div>
         `;
         list.appendChild(div);
+    }
+
+    function generateAllVariations() {
+        const selectedAttrIds = Array.from(document.querySelectorAll('input[name="product_attributes[]"]:checked'))
+            .map(cb => cb.value);
+        
+        if (selectedAttrIds.length === 0) {
+            alert("Please select at least one attribute first.");
+            return;
+        }
+
+        const attrValues = {};
+        selectedAttrIds.forEach(id => {
+            const checked = Array.from(document.querySelectorAll(`input[name="attr_val_${id}[]"]:checked`))
+                .map(cb => ({id: cb.value, name: cb.nextElementSibling.innerText}));
+            if (checked.length > 0) {
+                attrValues[id] = checked;
+            }
+        });
+
+        if (Object.keys(attrValues).length === 0) {
+            alert("Please select values for the checked attributes.");
+            return;
+        }
+
+        const combinations = cartesianProduct(Object.values(attrValues));
+        const list = document.getElementById('variationsList');
+        // We don't clear existing ones, just add new ones
+        
+        combinations.forEach(combo => {
+            const div = document.createElement('div');
+            div.className = 'variation-item card';
+            
+            let attrHtml = '';
+            selectedAttrIds.forEach((id, index) => {
+                const attr = allAttributes[id];
+                let optionsHtml = '';
+                const selectedVal = combo[index];
+                
+                attr.values.forEach(val => {
+                    optionsHtml += `<option value="${val.id}" ${val.id == selectedVal.id ? 'selected' : ''}>${val.value}</option>`;
+                });
+                
+                attrHtml += `
+                    <div class="var-attr-select">
+                        <label>${attr.name}</label>
+                        <select name="var_attr_${id}[]">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                `;
+            });
+
+            const idx = Date.now() + Math.round(Math.random() * 1000);
+            div.innerHTML = `
+                <div class="var-header">
+                    <span>Generated Variation</span>
+                    <button type="button" class="btn-remove" onclick="this.closest('.variation-item').remove()">&times;</button>
+                    <input type="hidden" name="var_idx[]" value="${idx}">
+                </div>
+                <div class="var-body">
+                    ${attrHtml}
+                    <div class="var-price-input">
+                        <label>Price</label>
+                        <input type="text" name="var_price[]" placeholder="Price (Optional)">
+                    </div>
+                    <div class="var-stock-select">
+                        <label>Stock</label>
+                        <select name="var_stock[]">
+                            <option value="instock">In Stock</option>
+                            <option value="outofstock">Out of Stock</option>
+                        </select>
+                    </div>
+                    <div class="var-img-input">
+                        <label>Image</label>
+                        <input type="file" name="var_img_${idx}">
+                        <input type="hidden" name="var_existing_img[]" value="">
+                    </div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function cartesianProduct(arrays) {
+        return arrays.reduce((acc, curr) => {
+            const res = [];
+            acc.forEach(a => {
+                curr.forEach(c => {
+                    res.push([...a, c]);
+                });
+            });
+            return res;
+        }, [[]]);
+    }
+
+    function applyBulkUpdate() {
+        const price = document.getElementById('bulk_price').value;
+        const stock = document.getElementById('bulk_stock').value;
+        
+        if (price) {
+            document.querySelectorAll('input[name="var_price[]"]').forEach(input => {
+                input.value = price;
+            });
+        }
+        
+        if (stock) {
+            document.querySelectorAll('select[name="var_stock[]"]').forEach(select => {
+                select.value = stock;
+            });
+        }
     }
 
     async function quickAddValue(attrId) {
@@ -338,8 +598,8 @@
                     if (existingCb) existingCb.checked = true;
                 } else {
                     // Update local data
-                    allAttributes[attrId].values.push({id: data.id, value: value});
-                    
+                    allAttributes[attrId].values.push({ id: data.id, value: value });
+
                     // Add to UI
                     const grid = document.getElementById(`attr_values_${attrId}`);
                     const newLabel = document.createElement('label');
@@ -347,7 +607,7 @@
                     newLabel.innerHTML = `<input type="checkbox" name="attr_val_${attrId}[]" value="${data.id}" checked style="width: 16px; height: 16px;"> <span style="font-weight: 500;">${value}</span>`;
                     grid.appendChild(newLabel);
                 }
-                
+
                 input.value = '';
             } else {
                 alert("Error: " + data.error);
@@ -581,13 +841,14 @@
     /* Attributes Selection */
     .attributes-selection-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
-        padding: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem;
         background: #f8fafc;
-        border-radius: 10px;
+        border-radius: 16px;
         border: 1px solid #e2e8f0;
     }
+
     .attr-checkbox-item {
         display: flex;
         align-items: center;
@@ -597,24 +858,30 @@
         font-weight: 600;
         color: #475569;
     }
+
     .attr-selection-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 0.5rem 0;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     }
-    .attr-selection-row:last-child { border-bottom: none; }
-    
+
+    .attr-selection-row:last-child {
+        border-bottom: none;
+    }
+
     .quick-add-value {
         display: flex;
         gap: 5px;
     }
+
     .quick-add-value input {
         width: 140px !important;
         padding: 4px 8px !important;
         font-size: 0.8rem !important;
     }
+
     .quick-add-value button {
         padding: 4px 8px;
         background: var(--admin-primary);
@@ -631,25 +898,29 @@
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
+
     .variation-item {
         background: #fff;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 2rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
         margin-bottom: 1rem;
     }
+
     .var-header {
         display: flex;
         align-items: center;
         gap: 8px;
         margin-bottom: 1.5rem;
     }
+
     .var-header span {
         font-weight: 600;
         font-size: 1.1rem;
         color: #1e293b;
     }
+
     .btn-remove {
         background: #f1f5f9;
         border: 1px solid #e2e8f0;
@@ -664,22 +935,28 @@
         font-size: 18px;
         transition: all 0.2s;
     }
+
     .btn-remove:hover {
         background: #fee2e2;
         color: #ef4444;
         border-color: #fecaca;
     }
+
     .var-body {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 2rem;
         align-items: start;
     }
-    .var-attr-select, .var-price-input, .var-stock-select {
+
+    .var-attr-select,
+    .var-price-input,
+    .var-stock-select {
         display: flex;
         flex-direction: column;
         gap: 8px;
     }
+
     .var-body label {
         font-size: 0.7rem;
         text-transform: uppercase;
@@ -688,7 +965,9 @@
         letter-spacing: 0.5px;
         margin-bottom: 0;
     }
-    .var-body input, .var-body select {
+
+    .var-body input,
+    .var-body select {
         background: #fff;
         border: 1px solid #cbd5e1;
         border-radius: 8px;
@@ -698,7 +977,9 @@
         width: 100%;
         transition: border-color 0.2s;
     }
-    .var-body input:focus, .var-body select:focus {
+
+    .var-body input:focus,
+    .var-body select:focus {
         border-color: #8b1a2a;
         box-shadow: 0 0 0 3px rgba(139, 26, 42, 0.05);
     }

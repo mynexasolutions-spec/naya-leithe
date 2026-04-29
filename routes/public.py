@@ -8,12 +8,29 @@ def home():
     categories = Category.query.all()
     all_products = Product.query.all()
     
-    new_arrivals = [p for p in all_products if p.badge == 'New'][:8]
-    featured_products = [p for p in all_products if p.is_featured or p.id.startswith('fp')][:8]
+    # Expand products for display (showing each color variation)
+    expanded_products = []
+    for p in all_products:
+        if p.product_type == 'variable' and p.variations:
+            # Group by color
+            color_variations = {}
+            for v in p.variations:
+                color_opt = next((opt for opt in v.options if 'color' in opt.attribute_value.attribute.name.lower()), None)
+                color_id = color_opt.attribute_value_id if color_opt else 'none'
+                if color_id not in color_variations:
+                    color_variations[color_id] = v
+            
+            for color_id, var in color_variations.items():
+                expanded_products.append({'product': p, 'variation': var})
+        else:
+            expanded_products.append({'product': p, 'variation': None})
+
+    new_arrivals = [p for p in expanded_products if p['product'].badge == 'New'][:8]
+    featured_products = [p for p in expanded_products if p['product'].is_featured][:8]
     
     category_sections = []
     for cat in categories:
-        prods = [p for p in all_products if p.cat_name == cat.name][:8]
+        prods = [p for p in expanded_products if p['product'].cat_name == cat.name][:8]
         if prods:
             category_sections.append({
                 'name': cat.name,
@@ -40,12 +57,11 @@ def shop():
         query = query.join(Category).filter(Category.name.in_(selected_categories))
     
     if selected_subcategories:
-        # Use an outer join or ensure multiple joins don't conflict
-        # But since SubCategory is child of Category, we can just filter by SubCategory name
         query = query.join(SubCategory).filter(SubCategory.name.in_(selected_subcategories))
         
     products = query.all()
     categories = Category.query.all()
+    
     return render_template('shop.html', products=products, active_categories=selected_categories, all_categories=categories, active_subcategories=selected_subcategories)
 
 @public_bp.route('/product/<id>')
@@ -53,8 +69,15 @@ def product_detail(id):
     product = Product.query.get(id)
     if not product:
         abort(404)
+    
+    variation_id = request.args.get('v')
+    selected_variation = None
+    if variation_id:
+        from models import ProductVariation
+        selected_variation = ProductVariation.query.get(variation_id)
+        
     related = Product.query.filter(Product.cat_name == product.cat_name, Product.id != product.id).limit(4).all()
-    return render_template('product.html', product=product, related=related)
+    return render_template('product.html', product=product, related=related, selected_variation=selected_variation)
     
 @public_bp.route('/blogs')
 def blogs():

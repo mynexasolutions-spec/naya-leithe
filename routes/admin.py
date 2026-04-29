@@ -100,9 +100,9 @@ def new_product():
         desc = request.form.get('desc')
         product_type = request.form.get('product_type', 'simple')
         stock_status = request.form.get('stock_status', 'instock')
-        category_id = request.form.get('category_id')
-        sub_category_id = request.form.get('sub_category_id')
-        brand_id = request.form.get('brand_id')
+        category_id = request.form.get('category_id') or None
+        sub_category_id = request.form.get('sub_category_id') or None
+        brand_id = request.form.get('brand_id') or None
         is_featured = True if request.form.get('is_featured') == 'on' else False
         
         category = Category.query.get(category_id)
@@ -151,10 +151,18 @@ def new_product():
             prod_attr = ProductAttribute(product_id=new_id, attribute_id=attr_id)
             db.session.add(prod_attr)
         
+        # Handle Gallery Images
+        gallery_files = request.files.getlist('gallery[]')
+        for f in gallery_files:
+            if f and f.filename:
+                gallery_img = ProductImage(product_id=new_id, img_url=save_image(f, 'products'))
+                db.session.add(gallery_img)
+        
         # Handle Variations if Variable Product
         if product_type == 'variable':
             v_prices = request.form.getlist('var_price[]')
             v_stocks = request.form.getlist('var_stock[]')
+            v_indices = request.form.getlist('var_idx[]')
             
             attr_values_map = {}
             for attr_id in selected_attr_ids:
@@ -166,10 +174,18 @@ def new_product():
                 v_price = v_prices[i].replace('₹', '').strip() if i < len(v_prices) and v_prices[i] else price
                 v_stock = v_stocks[i] if i < len(v_stocks) else 'instock'
                 
+                v_idx = v_indices[i] if i < len(v_indices) else None
+                v_img_url = None
+                if v_idx:
+                    v_img_file = request.files.get(f'var_img_{v_idx}')
+                    if v_img_file and v_img_file.filename:
+                        v_img_url = save_image(v_img_file, 'products')
+
                 variation = ProductVariation(
                     product_id=new_id,
                     price=f"₹{v_price}",
-                    stock_status=v_stock
+                    stock_status=v_stock,
+                    img_url=v_img_url
                 )
                 db.session.add(variation)
                 db.session.flush() # Get variation ID
@@ -210,10 +226,10 @@ def edit_product(id):
         product.product_type = request.form.get('product_type', 'simple')
         product.stock_status = request.form.get('stock_status', 'instock')
         
-        category_id = request.form.get('category_id')
+        category_id = request.form.get('category_id') or None
         product.category_id = category_id
-        product.sub_category_id = request.form.get('sub_category_id')
-        product.brand_id = request.form.get('brand_id')
+        product.sub_category_id = request.form.get('sub_category_id') or None
+        product.brand_id = request.form.get('brand_id') or None
         product.is_featured = True if request.form.get('is_featured') == 'on' else False
         
         category = Category.query.get(category_id)
@@ -230,6 +246,21 @@ def edit_product(id):
         if size_chart_file and size_chart_file.filename:
             product.size_chart = save_image(size_chart_file, 'size_charts')
         
+        # Handle Gallery Images
+        gallery_files = request.files.getlist('gallery[]')
+        for f in gallery_files:
+            if f and f.filename:
+                gallery_img = ProductImage(product_id=product.id, img_url=save_image(f, 'products'))
+                db.session.add(gallery_img)
+        
+        # Handle removed gallery images
+        remove_gallery_ids = request.form.getlist('remove_gallery[]')
+        for img_id in remove_gallery_ids:
+            p_img = ProductImage.query.get(img_id)
+            if p_img:
+                delete_image(p_img.img_url)
+                db.session.delete(p_img)
+
         # Clear existing attributes and variations
         ProductAttribute.query.filter_by(product_id=product.id).delete()
         ProductVariation.query.filter_by(product_id=product.id).delete()
@@ -244,6 +275,8 @@ def edit_product(id):
         if product.product_type == 'variable':
             v_prices = request.form.getlist('var_price[]')
             v_stocks = request.form.getlist('var_stock[]')
+            v_indices = request.form.getlist('var_idx[]')
+            v_existing_imgs = request.form.getlist('var_existing_img[]')
             
             attr_values_map = {}
             for attr_id in selected_attr_ids:
@@ -254,10 +287,19 @@ def edit_product(id):
                 v_price = v_prices[i].replace('₹', '').strip() if i < len(v_prices) and v_prices[i] else price
                 v_stock = v_stocks[i] if i < len(v_stocks) else 'instock'
                 
+                v_idx = v_indices[i] if i < len(v_indices) else None
+                v_img_url = v_existing_imgs[i] if i < len(v_existing_imgs) else None
+                
+                if v_idx:
+                    v_img_file = request.files.get(f'var_img_{v_idx}')
+                    if v_img_file and v_img_file.filename:
+                        v_img_url = save_image(v_img_file, 'products')
+                
                 variation = ProductVariation(
                     product_id=product.id,
                     price=f"₹{v_price}",
-                    stock_status=v_stock
+                    stock_status=v_stock,
+                    img_url=v_img_url
                 )
                 db.session.add(variation)
                 db.session.flush() # Get variation ID
@@ -431,14 +473,24 @@ def admin_attribute_new():
         name = request.form.get('name')
         slug = request.form.get('slug')
         image_url = request.form.get('image_url')
+        attr_type = request.form.get('type', 'select')
         is_featured = True if request.form.get('is_featured') == 'on' else False
         
         if not slug:
             slug = name.lower().replace(' ', '-')
             
-        attribute = Attribute(name=name, slug=slug, image_url=image_url, is_featured=is_featured)
+        attribute = Attribute(name=name, slug=slug, image_url=image_url, is_featured=is_featured, type=attr_type)
         db.session.add(attribute)
         db.session.commit()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'id': attribute.id,
+                'name': attribute.name,
+                'slug': attribute.slug
+            })
+            
         flash('Attribute added successfully!', 'success')
         return redirect(url_for('admin.admin_attributes'))
     return render_template('admin/attribute_form.html')
@@ -453,6 +505,7 @@ def admin_attribute_edit(attr_id):
     if request.method == 'POST':
         attribute.name = request.form.get('name')
         attribute.slug = request.form.get('slug')
+        attribute.type = request.form.get('type', 'select')
         attribute.image_url = request.form.get('image_url')
         attribute.is_featured = True if request.form.get('is_featured') == 'on' else False
         

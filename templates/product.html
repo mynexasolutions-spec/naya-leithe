@@ -1,33 +1,6 @@
 {% extends "base.html" %}
 
-{% macro product_card(product) %}
-<div class="product-card">
-    <div class="product-img-wrap">
-        <a href="{{ url_for('public.product_detail', id=product.id) }}">
-            <img src="{{ product.img }}" alt="{{ product.name }}" loading="lazy">
-        </a>
-        {% if product.badge %}
-        <span class="product-badge {{ product.badge.lower() }}">
-            {{ product.badge }}
-        </span>
-        {% endif %}
-        <div class="product-wishlist {% if product.id in session.get('wishlist', []) %}active{% endif %}"
-            onclick="toggleWishlist(event, '{{ product.id }}')">
-            <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" class="icon-img icon-wishlist"
-                alt="wishlist">
-        </div>
-    </div>
-    <div class="product-info">
-        <div class="product-category">{{ product.cat_name }}</div>
-        <div class="product-name">{{ product.name }}</div>
-        <div class="product-prices">
-            <span class="product-price">{{ product.price }}</span>
-            <span class="product-price-original">{{ product.orig }}</span>
-        </div>
-        <button class="product-add-btn">Add to Cart</button>
-    </div>
-</div>
-{% endmacro %}
+{% from "macros.html" import product_card %}
 
 {% block content %}
 <div class="product-detail-page">
@@ -35,12 +8,42 @@
         <!-- LEFT: IMAGE VIEW -->
         <div class="product-gallery">
             <div class="main-img">
-                <img src="{{ product.img }}" alt="{{ product.name }}" id="mainProductImg">
+                {# Determine initial image: Use variation color image or product main image #}
+                {% set initial_img = product.img %}
+                {% if selected_variation %}
+                    {% set color_opt = None %}
+                    {% for opt in selected_variation.options if 'color' in opt.attribute_value.attribute.name.lower() %}
+                        {% set color_opt = opt %}
+                    {% endfor %}
+                    {% if color_opt %}
+                        {% for p_img in product.images %}
+                            {% if p_img.attribute_value_id == color_opt.attribute_value_id %}
+                                {% set initial_img = p_img.img_url %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+                <img src="{{ initial_img }}" alt="{{ product.name }}" id="mainProductImg">
             </div>
+
+            {# Thumbnails #}
+            <div class="gallery-thumbnails" id="galleryThumbs">
+                <div class="thumb active" onclick="changeMainImg('{{ product.img }}', this)" data-attr-val="none">
+                    <img src="{{ product.img }}" alt="Main">
+                </div>
+                {% for p_img in product.images %}
+                <div class="thumb" 
+                    onclick="changeMainImg('{{ p_img.img_url }}', this)" 
+                    data-attr-val="{{ p_img.attribute_value_id or 'none' }}"
+                    style="display: {{ 'block' if not selected_variation or p_img.attribute_value_id == color_opt.attribute_value_id else 'none' }}">
+                    <img src="{{ p_img.img_url }}" alt="Gallery">
+                </div>
+                {% endfor %}
+            </div>
+
             {% if product.size_chart %}
             <div class="size-chart-link-wrap">
-                <a href="#sizeChartModal" class="size-chart-link"><i class="fas fa-ruler-combined"></i> View Size
-                    Chart</a>
+                <a href="#sizeChartModal" class="size-chart-link"><i class="fas fa-ruler-combined"></i> View Size Chart</a>
             </div>
             {% endif %}
         </div>
@@ -55,15 +58,15 @@
             </div>
             <h1>{{ product.name }}</h1>
             <div class="detail-price-row">
-                <span class="current-price">{{ product.price }}</span>
+                <span class="current-price" id="displayPrice">{{ selected_variation.price if selected_variation else product.price }}</span>
                 {% if product.orig %}
                 <span class="orig-price">{{ product.orig }}</span>
                 <span class="discount-tag">Offer</span>
                 {% endif %}
             </div>
 
-            <div class="stock-status {{ product.stock_status }}">
-                {% if product.stock_status == 'instock' %}
+            <div id="displayStock" class="stock-status {{ selected_variation.stock_status if selected_variation else product.stock_status }}">
+                {% if (selected_variation.stock_status if selected_variation else product.stock_status) == 'instock' %}
                 <i class="fas fa-check-circle"></i> In Stock
                 {% else %}
                 <i class="fas fa-times-circle"></i> Out of Stock
@@ -71,41 +74,41 @@
             </div>
 
             <p class="description">
-                {% if product.desc %}
-                {{ product.desc }}
-                {% else %}
-                Exquisite hand-threaded silk saree featuring traditional motifs and a contrasting border. Perfect for
-                weddings and high-profile festive events. Lightweight yet luxurious feel with a rich pallu.
-                {% endif %}
+                {{ product.desc or 'Exquisite fashion piece designed for elegance and comfort.' }}
             </p>
 
-            {% if product.sizes %}
+            {# Dynamic Attributes #}
+            {% for p_attr in product.attributes %}
             <div class="variant-sect">
                 <div class="variant-header">
-                    <h4>Select Size</h4>
+                    <h4>Select {{ p_attr.attribute.name }}</h4>
                 </div>
-                <div class="size-options selector-group" id="sizeSelector">
-                    {% for size in product.sizes.split(',') %}
-                    <button class="size-btn {{ 'active' if loop.first }}" data-size="{{ size.strip() }}">{{ size.strip()
-                        }}</button>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
+                <div class="selector-group {{ 'color-options' if 'color' in p_attr.attribute.name.lower() else '' }}" id="attr-{{ p_attr.attribute.id }}">
+                    {% set used_value_ids = product.variations|map(attribute='options')|sum(start=[])|map(attribute='attribute_value_id')|unique|list %}
+                    {% for val in p_attr.attribute.values if val.id in used_value_ids %}
+                    {# Check if this value is selected in the current variation deep-link #}
+                    {% set is_active = false %}
+                    {% if selected_variation %}
+                        {% for opt in selected_variation.options if opt.attribute_value_id == val.id %}
+                            {% set is_active = true %}
+                        {% endfor %}
+                    {% elif loop.first %}
+                        {% set is_active = true %}
+                    {% endif %}
 
-            {% if product.colors %}
-            <div class="variant-sect">
-                <div class="variant-header">
-                    <h4>Select Color</h4>
-                </div>
-                <div class="color-options selector-group" id="colorSelector">
-                    {% for color in product.colors.split(',') %}
-                    <button class="color-btn {{ 'active' if loop.first }}" data-color="{{ color.strip() }}">{{
-                        color.strip() }}</button>
+                    <button class="attr-btn {{ 'active' if is_active }}" 
+                        data-attr-id="{{ p_attr.attribute.id }}" 
+                        data-val-id="{{ val.id }}"
+                        onclick="handleAttrSelect(this)">
+                        {% if val.image_url %}
+                        <img src="{{ val.image_url }}" class="swatch-img" alt="{{ val.value }}">
+                        {% endif %}
+                        {{ val.value }}
+                    </button>
                     {% endfor %}
                 </div>
             </div>
-            {% endif %}
+            {% endfor %}
 
             <div class="action-btns">
                 <button class="add-to-cart" data-id="{{ product.id }}" onclick="addToCart(this)">Add to Cart</button>
@@ -172,36 +175,46 @@
         margin-bottom: 1rem;
     }
 
-    .size-btn {
-        padding: 10px 20px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.3s;
+    .selector-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
     }
 
-    .size-btn.active {
+    .attr-btn {
+        padding: 10px 24px;
+        border: 1.5px solid #e2e8f0;
+        background: #fff;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+    }
+
+    .attr-btn:hover {
+        border-color: var(--crimson);
+        background: #fdf2f2;
+    }
+
+    .attr-btn.active {
         border-color: var(--crimson);
         background: var(--crimson);
         color: #fff;
+        box-shadow: 0 4px 12px rgba(139, 26, 42, 0.2);
     }
 
-    .color-btn {
-        padding: 8px 16px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
-        border-radius: 20px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: 0.3s;
-    }
-
-    .color-btn.active {
-        border-color: var(--crimson);
-        background: #fff5f6;
-        color: var(--crimson);
+    .swatch-img {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid rgba(0,0,0,0.1);
     }
 
     .stock-status {
@@ -254,53 +267,141 @@
 
 {% block scripts %}
 <script>
-    // Variation selection (Size & Color)
-    document.querySelectorAll('.selector-group').forEach(group => {
-        const btns = group.querySelectorAll('button');
-        btns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                btns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
+    // Variation selection
+    const variations = [
+        {% for var in product.variations %}
+        {
+            "id": {{ var.id }},
+            "price": "{{ var.price }}",
+            "stock": "{{ var.stock_status }}",
+            "img": "{{ var.img_url or '' }}",
+            "options": {
+                {% for opt in var.options %}
+                "{{ opt.attribute_value.attribute_id }}": "{{ opt.attribute_value_id }}",
+                {% endfor %}
+            }
+        },
+        {% endfor %}
+    ];
+
+    function changeMainImg(url, thumb) {
+        document.getElementById('mainProductImg').src = url;
+        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+        if (thumb) thumb.classList.add('active');
+    }
+
+    function handleAttrSelect(btn) {
+        const group = btn.closest('.selector-group');
+        group.querySelectorAll('.attr-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Instant Image Update: Find first variation that matches this specific attribute value
+        const valId = btn.getAttribute('data-val-id');
+        const attrId = btn.getAttribute('data-attr-id');
+        const firstMatch = variations.find(v => v.options[attrId] == valId);
+        
+        if (firstMatch && firstMatch.img && firstMatch.img !== 'None' && firstMatch.img !== '') {
+            document.getElementById('mainProductImg').src = firstMatch.img;
+        }
+
+        // Check if it's a color selection to filter gallery
+        const attrName = btn.closest('.variant-sect').querySelector('h4').innerText.toLowerCase();
+        if (attrName.includes('color')) {
+            filterGallery(valId);
+        }
+
+        updateVariationInfo();
+    }
+
+    function filterGallery(valId) {
+        const thumbs = document.querySelectorAll('.thumb');
+        let firstVisible = null;
+
+        thumbs.forEach(t => {
+            const attrVal = t.getAttribute('data-attr-val');
+            if (attrVal === 'none' || attrVal === valId) {
+                t.style.display = 'block';
+                if (!firstVisible && attrVal !== 'none') firstVisible = t;
+            } else {
+                t.style.display = 'none';
+            }
         });
-    });
+
+        if (firstVisible) {
+            firstVisible.click();
+        }
+    }
+
+    function updateVariationInfo() {
+        const selected = {};
+        document.querySelectorAll('.attr-btn.active').forEach(btn => {
+            selected[btn.getAttribute('data-attr-id')] = btn.getAttribute('data-val-id');
+        });
+
+        const match = variations.find(v => {
+            return Object.keys(v.options).every(attrId => v.options[attrId] == selected[attrId]);
+        });
+
+        if (match) {
+            // Update Price & Stock
+            document.getElementById('displayPrice').innerText = match.price;
+            const stockSect = document.getElementById('displayStock');
+            if (match.stock === 'instock') {
+                stockSect.className = 'stock-status instock';
+                stockSect.innerHTML = '<i class="fas fa-check-circle"></i> In Stock';
+            } else {
+                stockSect.className = 'stock-status outofstock';
+                stockSect.innerHTML = '<i class="fas fa-times-circle"></i> Out of Stock';
+            }
+
+            // Update Image if variation has one
+            if (match.img && match.img !== 'None' && match.img !== '') {
+                document.getElementById('mainProductImg').src = match.img;
+            }
+
+            // Update URL without reload to feel like individual page
+            const newUrl = window.location.pathname + '?v=' + match.id;
+            window.history.pushState({path: newUrl}, '', newUrl);
+        }
+    }
 
     function addToCart(btn) {
         const productId = btn.getAttribute('data-id');
-        const sizeBtn = document.querySelector('#sizeSelector .size-btn.active');
-        const colorBtn = document.querySelector('#colorSelector .color-btn.active');
-        const size = sizeBtn ? sizeBtn.getAttribute('data-size') : '';
-        const color = colorBtn ? colorBtn.getAttribute('data-color') : '';
+        const selected = {};
+        document.querySelectorAll('.attr-btn.active').forEach(btn => {
+            selected[btn.getAttribute('data-attr-id')] = btn.getAttribute('data-val-id');
+        });
+
+        const match = variations.find(v => {
+            return Object.keys(v.options).every(attrId => v.options[attrId] == selected[attrId]);
+        });
+
+        if (!match) {
+            alert("Please select all options.");
+            return;
+        }
 
         const formData = new FormData();
-        formData.append('size', size);
-        formData.append('color', color);
+        formData.append('variation_id', match.id);
 
         fetch(`/add-to-cart/${productId}`, {
             method: 'POST',
             body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const badge = document.getElementById('cartBadge');
-                    if (badge) badge.innerText = data.cart_count;
-
-                    const originalText = btn.innerText;
-                    btn.innerText = 'Added to Bag!';
-                    btn.style.background = '#10b981';
-                    btn.style.color = '#fff';
-
-                    setTimeout(() => {
-                        btn.innerText = originalText;
-                        btn.style.background = '';
-                        btn.style.color = '';
-                    }, 2000);
-                }
-            });
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const badge = document.getElementById('cartBadge');
+                if (badge) badge.innerText = data.cart_count;
+                btn.innerText = 'Added to Bag!';
+                btn.style.background = '#10b981';
+                setTimeout(() => {
+                    btn.innerText = 'Add to Cart';
+                    btn.style.background = '';
+                }, 2000);
+            }
+        });
     }
 
     // Modal logic

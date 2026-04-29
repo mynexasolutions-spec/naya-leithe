@@ -12,31 +12,62 @@ def safe_price(price_str):
 
 @cart_bp.route('/cart')
 def view_cart():
+    from models import ProductVariation
     cart = session.get('cart', {})
     cart_items = []
     subtotal = 0
     for product_id, quantity in cart.items():
-        # Cart key may be "pid_size_color" — always look up by base ID
-        base_id = product_id.split('_')[0]
-        product = Product.query.get(base_id)
+        # Key format: "var:ID" for new variations, or legacy "pid_size_color"
+        product = None
+        variation = None
+        size, color = None, None
+        display_price = 0
+
+        if product_id.startswith('var:'):
+            var_id = product_id.split(':')[1]
+            variation = ProductVariation.query.get(var_id)
+            if variation:
+                product = variation.product
+                display_price = safe_price(variation.price)
+                # Extract options
+                for opt in variation.options:
+                    attr_name = opt.attribute_value.attribute.name.lower()
+                    if 'size' in attr_name: size = opt.attribute_value.value
+                    if 'color' in attr_name: color = opt.attribute_value.value
+        else:
+            # Legacy or Simple Product
+            base_id = product_id.split('_')[0]
+            product = Product.query.get(base_id)
+            if product:
+                display_price = safe_price(product.price)
+                if '_' in product_id:
+                    parts = product_id.split('_')
+                    if len(parts) >= 3:
+                        size = parts[1] if parts[1] != 'NA' else None
+                        color = parts[2] if parts[2] != 'NA' else None
+
         if product:
-            price_val = safe_price(product.price)
-            item_total = price_val * quantity
+            item_total = display_price * quantity
             subtotal += item_total
 
-            # Extract variation info if stored in key (format: pid_size_color)
-            size, color = None, None
-            if '_' in product_id:
-                parts = product_id.split('_')
-                if len(parts) >= 3:
-                    size = parts[1] if parts[1] != 'NA' else None
-                    color = parts[2] if parts[2] != 'NA' else None
+            # Find variation image if color exists
+            var_img = None
+            if variation:
+                color_opt = next((opt for opt in variation.options if 'color' in opt.attribute_value.attribute.name.lower()), None)
+                if color_opt:
+                    for p_img in product.images:
+                        if p_img.attribute_value_id == color_opt.attribute_value_id:
+                            var_img = p_img.img_url
+                            break
 
             cart_items.append({
                 'id': product_id,
                 'product': product,
+                'variation': variation,
                 'quantity': quantity,
                 'item_total': f"₹{item_total:,}",
+                'display_price': f"₹{display_price:,}",
+                'var_img': var_img,
                 'size': size,
                 'color': color
             })
@@ -45,21 +76,18 @@ def view_cart():
 
 @cart_bp.route('/add-to-cart/<id>', methods=['POST'])
 def add_to_cart(id):
-    product = Product.query.get(id)
-    if not product:
-        # Fallback for variation keys if not found directly
-        base_id = id.split('_')[0]
-        product = Product.query.get(base_id)
-        if not product:
-            return jsonify({'error': 'Product not found'}), 404
-            
-    size = request.form.get('size')
-    color = request.form.get('color')
+    variation_id = request.form.get('variation_id')
     
-    # Create a unique key for the cart
-    cart_key = id
-    if size or color:
-        cart_key = f"{id}_{size or 'NA'}_{color or 'NA'}"
+    # Use "var:ID" as cart key for distinct variation tracking
+    if variation_id:
+        cart_key = f"var:{variation_id}"
+    else:
+        # Fallback for simple products
+        size = request.form.get('size')
+        color = request.form.get('color')
+        cart_key = id
+        if size or color:
+            cart_key = f"{id}_{size or 'NA'}_{color or 'NA'}"
         
     cart = session.get('cart', {})
     cart[cart_key] = cart.get(cart_key, 0) + 1
@@ -85,19 +113,31 @@ def update_cart(id):
     session['cart'] = cart
     session.modified = True
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
-        # Resolve product from key
-        base_id = id.split('_')[0]
-        product = Product.query.get(base_id)
+        # Resolve product/price from key
+        from models import ProductVariation
+        display_price = 0
+        if id.startswith('var:'):
+            var_id = id.split(':')[1]
+            var = ProductVariation.query.get(var_id)
+            if var: display_price = safe_price(var.price)
+        else:
+            base_id = id.split('_')[0]
+            product = Product.query.get(base_id)
+            if product: display_price = safe_price(product.price)
 
-        price_val = safe_price(product.price) if product else 0
-        item_total = price_val * quantity
+        item_total = display_price * quantity
 
         total = 0
         for pid, qty in cart.items():
-            base_pid = pid.split('_')[0]
-            p = Product.query.get(base_pid)
-            if p:
-                total += safe_price(p.price) * qty
+            if pid.startswith('var:'):
+                v_id = pid.split(':')[1]
+                v = ProductVariation.query.get(v_id)
+                if v: total += safe_price(v.price) * qty
+            else:
+                base_pid = pid.split('_')[0]
+                p = Product.query.get(base_pid)
+                if p: total += safe_price(p.price) * qty
+
         return jsonify({
             'success': True, 
             'cart_count': sum(cart.values()),

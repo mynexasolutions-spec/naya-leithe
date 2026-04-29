@@ -18,10 +18,29 @@
     <input type="text" name="name" value="{{ attribute.name if attribute }}" required placeholder="e.g. Power (SPH) or Color" class="admin-input" />
   </div>
 
-  <div style="margin-bottom:2rem;">
+  <div style="margin-bottom:1.5rem;">
     <label class="admin-label">Slug</label>
     <input type="text" name="slug" value="{{ attribute.slug if attribute }}" placeholder="e.g. power-sph" class="admin-input" />
-    <span style="font-size:0.75rem; color:var(--admin-text-muted); margin-top:0.4rem; display:block;">Unique identifier used in URLs. Leave blank to auto-generate.</span>
+  </div>
+
+  <div style="margin-bottom:1.5rem;">
+    <label class="admin-label">Attribute Type</label>
+    <select name="type" class="admin-input">
+      <option value="select" {{ 'selected' if attribute and attribute.type == 'select' }}>Dropdown/Select</option>
+      <option value="color" {{ 'selected' if attribute and attribute.type == 'color' }}>Color Swatch</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom:1.5rem;">
+    <label class="admin-label">Attribute Swatch/Icon URL (Optional)</label>
+    <input type="text" name="image_url" value="{{ attribute.image_url if attribute }}" placeholder="e.g. https://...image.png" class="admin-input" />
+  </div>
+
+  <div style="margin-bottom:2rem;">
+    <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+      <input type="checkbox" name="is_featured" {{ 'checked' if attribute and attribute.is_featured }}>
+      <span style="font-size:0.875rem; font-weight:500;">Feature this attribute on product cards</span>
+    </label>
   </div>
 
 

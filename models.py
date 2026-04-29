@@ -77,8 +77,9 @@ class SubCategory(db.Model):
 
 class ProductVariation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=False)
+    product_id = db.Column(db.String(50), db.ForeignKey('product.id', ondelete='CASCADE'), nullable=False)
     price = db.Column(db.String(20))
+    img_url = db.Column(db.String(512))
     stock_status = db.Column(db.String(20), default='instock')
 
     def __repr__(self):
@@ -112,6 +113,8 @@ class Attribute(db.Model):
     name = db.Column(db.String(100), nullable=False)
     slug = db.Column(db.String(100), unique=True)
     type = db.Column(db.String(50), default='select') # 'text', 'select', 'color'
+    image_url = db.Column(db.String(512))
+    is_featured = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return f"<Attribute {self.name}>"
@@ -121,6 +124,7 @@ class AttributeValue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     attribute_id = db.Column(db.Integer, db.ForeignKey('attribute.id'), nullable=False)
     value = db.Column(db.String(100), nullable=False)
+    image_url = db.Column(db.String(512))
     attribute = db.relationship('Attribute', backref=db.backref('values', lazy=True, cascade="all, delete-orphan"))
 
     def __repr__(self):
@@ -128,15 +132,23 @@ class AttributeValue(db.Model):
 
 class ProductAttribute(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=False)
+    product_id = db.Column(db.String(50), db.ForeignKey('product.id', ondelete='CASCADE'), nullable=False)
     attribute_id = db.Column(db.Integer, db.ForeignKey('attribute.id'), nullable=False)
     attribute = db.relationship('Attribute')
 
 class VariationOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    variation_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=False)
+    variation_id = db.Column(db.Integer, db.ForeignKey('product_variation.id', ondelete='CASCADE'), nullable=False)
     attribute_value_id = db.Column(db.Integer, db.ForeignKey('attribute_value.id'), nullable=False)
     variation = db.relationship('ProductVariation', backref=db.backref('options', lazy=True, cascade="all, delete-orphan"))
+    attribute_value = db.relationship('AttributeValue')
+
+class ProductImage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=False)
+    attribute_value_id = db.Column(db.Integer, db.ForeignKey('attribute_value.id'), nullable=True)
+    img_url = db.Column(db.String(512), nullable=False)
+    product_rel = db.relationship('Product', backref=db.backref('images', lazy=True, cascade="all, delete-orphan"))
     attribute_value = db.relationship('AttributeValue')
 
 class Brand(db.Model):

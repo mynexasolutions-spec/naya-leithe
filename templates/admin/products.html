@@ -39,7 +39,7 @@
                     <th>Category</th>
                     <th>Price</th>
                     <th>Badge</th>
-                    <th>Sizes</th>
+                    <th>Attributes</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -53,13 +53,41 @@
                             <div class="product-info">
                                 <strong>{{ product.name }}</strong>
                                 <span>ID: {{ product.id }}</span>
+                                {% if product.product_type == 'simple' %}
+                                <span style="font-size: 0.65rem; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">Simple Product</span>
+                                {% endif %}
                             </div>
                         </div>
                     </td>
                     <td>{{ product.cat_name }}</td>
                     <td><span class="price-text">{{ product.price }}</span></td>
                     <td><span class="badge-tag">{{ product.badge or '-' }}</span></td>
-                    <td><span class="size-text">{{ product.sizes or '-' }}</span></td>
+                    <td>
+                        {% if product.product_type == 'simple' %}
+                            <span class="size-text">-</span>
+                        {% else %}
+                            <div class="attribute-summary" style="display: flex; flex-direction: column; gap: 4px;">
+                                {% for pa in product.attributes %}
+                                    <div style="font-size: 0.75rem;">
+                                        <span style="color: #64748b; font-weight: 600;">{{ pa.attribute.name }}:</span>
+                                        <span style="color: #1e293b;">
+                                            {% set vals = [] %}
+                                            {% for var in product.variations %}
+                                                {% for opt in var.options %}
+                                                    {% if opt.attribute_value.attribute_id == pa.attribute_id %}
+                                                        {% if opt.attribute_value.value not in vals %}
+                                                            {% do vals.append(opt.attribute_value.value) %}
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endfor %}
+                                            {{ vals|join(', ') or '-' }}
+                                        </span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </td>
                     <td><span class="status-badge success">Active</span></td>
                     <td>
                         <div class="action-btns">
