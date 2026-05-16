@@ -1,7 +1,5 @@
-from flask import Blueprint, render_template
+from flask import Blueprint
 
 checkout_bp = Blueprint('checkout', __name__)
 
-@checkout_bp.route('/checkout')
-def checkout():
-    return "Checkout functionality coming soon!"
+# Checkout logic has been moved to cart.py to share cart session context seamlessly.

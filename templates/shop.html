@@ -33,8 +33,15 @@
                 <div class="filter-group">
                     <h3>Categories</h3>
                     <div class="filter-options">
-                        <label class="all-prod-label"><input type="checkbox" id="allProducts" {% if not active_categories and not active_subcategories %}checked{% endif %}>
+                        <label class="all-prod-label"><input type="checkbox" id="allProducts" {% if not active_categories and not active_subcategories and not request.args.get('on_sale') %}checked{% endif %}>
                             All Products</label>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <label class="category-parent" style="color: var(--gold); font-weight: 700;">
+                                <input type="checkbox" name="on_sale" value="1" {% if request.args.get('on_sale') %}checked{% endif %} onchange="uncheckAll()">
+                                <span class="category-name"><i class="fas fa-tag"></i> On Sale</span>
+                            </label>
+                        </div>
                         {% for cat in all_categories %}
                         <div class="filter-category-item">
                             <label class="category-parent">
@@ -91,11 +98,70 @@
                 {{ product_card(prod) }}
                 {% endfor %}
             </div>
+
+            <!-- PAGINATION -->
+            {% if pagination.pages > 1 %}
+            <div class="shop-pagination">
+                {% set args = request.args.to_dict(flat=False) %}
+                {% if pagination.has_prev %}
+                {% set _ = args.update({'page': pagination.prev_num}) %}
+                <a href="{{ url_for('public.shop', **args) }}" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+                {% endif %}
+
+                {% for p in pagination.iter_pages() %}
+                    {% if p %}
+                        {% set _ = args.update({'page': p}) %}
+                        <a href="{{ url_for('public.shop', **args) }}" class="page-btn {{ 'active' if p == pagination.page }}">{{ p }}</a>
+                    {% else %}
+                        <span class="page-dots">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                {% if pagination.has_next %}
+                {% set _ = args.update({'page': pagination.next_num}) %}
+                <a href="{{ url_for('public.shop', **args) }}" class="page-btn"><i class="fas fa-chevron-right"></i></a>
+                {% endif %}
+            </div>
+            {% endif %}
         </main>
     </div>
 </div>
 
 <style>
+    .shop-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4rem;
+        margin-bottom: 2rem;
+    }
+    .page-btn {
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--sand);
+        border-radius: 50%;
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .page-btn:hover {
+        border-color: var(--crimson);
+        color: var(--crimson);
+    }
+    .page-btn.active {
+        background: var(--crimson);
+        color: #fff;
+        border-color: var(--crimson);
+    }
+    .page-dots {
+        color: var(--muted);
+    }
+
     .filter-category-item {
         margin-bottom: 1.2rem;
     }

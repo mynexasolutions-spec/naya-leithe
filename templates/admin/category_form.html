@@ -2,24 +2,34 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Add New Category</h1>
-    <p>Create a new category for your store collection.</p>
+    <h1>{% if category %}Edit{% else %}Add New{% endif %} Category</h1>
+    <p>{% if category %}Update details for "{{ category.name }}".{% else %}Create a new category for your store collection.{% endif %}</p>
 </div>
 
 <div class="section-card">
-    <form action="{{ url_for('admin.new_category') }}" method="POST" enctype="multipart/form-data" class="admin-form">
+    <form action="{% if category %}{{ url_for('admin.edit_category', id=category.id) }}{% else %}{{ url_for('admin.new_category') }}{% endif %}" 
+          method="POST" enctype="multipart/form-data" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+        
         <div class="form-grid">
             <div class="form-group">
                 <label>Category Name</label>
-                <input type="text" name="name" placeholder="e.g. Western Wear" required>
+                <input type="text" name="name" placeholder="e.g. Western Wear" 
+                       value="{{ category.name if category else '' }}" required>
             </div>
             <div class="form-group">
                 <label>Category Image</label>
-                <input type="file" name="img" accept="image/*" required>
+                {% if category and category.img %}
+                <div class="current-img" style="margin-bottom: 10px;">
+                    <img src="{{ category.img }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 12px; border: 1px solid var(--sand);">
+                    <p style="font-size: 0.8rem; color: var(--muted); margin-top: 5px;">Current Banner</p>
+                </div>
+                {% endif %}
+                <input type="file" name="img" accept="image/*" {% if not category %}required{% endif %}>
             </div>
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Save Category</button>
+            <button type="submit" class="btn btn-primary">{% if category %}Update{% else %}Save{% endif %} Category</button>
             <a href="{{ url_for('admin.categories') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>

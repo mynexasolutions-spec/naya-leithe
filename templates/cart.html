@@ -27,13 +27,19 @@
                     <tbody>
                         {% for item in cart_items %}
                         <tr>
-                            <td class="product-cell">
+                            <td class="product-cell" data-label="Product">
                                 <div class="cart-prod-info">
                                     <img src="{{ item.var_img or item.product.img }}" alt="{{ item.product.name }}">
                                     <div>
                                          <div class="cart-prod-cat">{{ item.product.cat_name }}</div>
                                          <div class="cart-prod-name">{{ item.product.name }}</div>
-                                         {% if item.size or item.color %}
+                                         {% if item.options %}
+                                         <div class="cart-prod-variants">
+                                             {% for opt in item.options %}
+                                             <span>{{ opt.name }}: {{ opt.value }}</span>
+                                             {% endfor %}
+                                         </div>
+                                         {% elif item.size or item.color %}
                                          <div class="cart-prod-variants">
                                              {% if item.size and item.size != 'NA' %}<span>Size: {{ item.size }}</span>{% endif %}
                                              {% if item.color and item.color != 'NA' %}<span>Color: {{ item.color }}</span>{% endif %}
@@ -42,8 +48,8 @@
                                      </div>
                                 </div>
                             </td>
-                            <td>{{ item.display_price }}</td>
-                            <td>
+                            <td data-label="Price">{{ item.display_price }}</td>
+                            <td data-label="Quantity">
                                 <form action="{{ url_for('cart.update_cart', id=item.id) }}" method="POST" class="qty-form">
                                     <div class="qty-control">
                                         <button type="submit" name="quantity" value="{{ item.quantity - 1 }}">-</button>
@@ -52,8 +58,8 @@
                                     </div>
                                 </form>
                             </td>
-                            <td class="item-total-cell">{{ item.item_total }}</td>
-                            <td>
+                            <td class="item-total-cell" data-label="Total">{{ item.item_total }}</td>
+                            <td data-label="Action">
                                 <a href="{{ url_for('cart.remove_from_cart', id=item.id) }}" class="remove-btn">
                                     <img src="https://api.iconify.design/lucide:trash-2.svg?color=%238a7f78" alt="remove">
                                 </a>
@@ -88,7 +94,7 @@
                         <span class="subtotal-val">{{ subtotal }}</span>
                     </div>
                     <p class="tax-info">Tax included. Shipping calculated at checkout.</p>
-                    <button class="checkout-btn">Proceed to Checkout</button>
+                    <a href="{{ url_for('cart.checkout') }}" class="checkout-btn" style="display: block; text-align: center; text-decoration: none;">Proceed to Checkout</a>
                     
                     <div class="secure-info">
                         <img src="https://api.iconify.design/lucide:shield-check.svg?color=%235a7a3b" alt="secure">

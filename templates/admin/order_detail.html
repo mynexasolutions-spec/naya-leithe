@@ -1,0 +1,232 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-left">
+        <a href="{{ url_for('admin.orders') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Orders</a>
+        <h1>Order #{{ order.order_number }}</h1>
+        <p>Placed on {{ order.date.strftime('%b %d, %Y at %I:%M %p') }}</p>
+    </div>
+    <div class="header-right" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+        {% if order.status.lower() != 'cancelled' %}
+        <button class="btn-cancel-order" onclick="adminCancelOrder('{{ order.id }}')" style="background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; padding: 10px 18px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.3s; white-space: nowrap;">Cancel Order</button>
+        {% endif %}
+        <form action="{{ url_for('admin.update_order_status', id=order.id) }}" method="POST" class="status-update-form" style="display: flex; align-items: center; gap: 0.5rem; background: #fff; padding: 4px; border-radius: 12px; border: 1px solid #e2e8f0; flex-wrap: nowrap;">
+            <select name="status" class="status-select" style="border: none; outline: none; padding: 6px 8px; font-weight: 600; color: #1e293b; background: transparent; cursor: pointer; font-size: 0.9rem; min-width: 140px;">
+                <option value="Pending Payment" {% if order.status == 'Pending Payment' %}selected{% endif %}>Pending Payment</option>
+                <option value="Processing" {% if order.status == 'Processing' %}selected{% endif %}>Processing</option>
+                <option value="Shipped" {% if order.status == 'Shipped' %}selected{% endif %}>Shipped</option>
+                <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                <option value="Cancelled" {% if order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+            <button type="submit" class="btn-primary" style="background: var(--crimson); color: #fff; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 0.85rem; white-space: nowrap;">Update Status</button>
+        </form>
+    </div>
+</div>
+
+<div class="order-grid">
+    <div class="order-main">
+        <div class="section-card">
+            <h3>Order Items</h3>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Qty</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items %}
+                    <tr>
+                        <td>
+                            <div class="item-info">
+                                <strong>{{ item.product.name }}</strong>
+                                {% if item.variation_details %}
+                                <div class="item-meta">{{ item.variation_details }}</div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ item.price_at_time }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>
+                            {% set price_val = item.price_at_time.replace('₹', '').replace(',', '') | float %}
+                            ₹{{ '{:,.2f}'.format(price_val * item.quantity) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="3">Total Amount</td>
+                        <td>{{ order.total_amount }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <aside class="order-sidebar">
+        <div class="section-card">
+            <h3>Customer Details</h3>
+            <div class="info-group">
+                <label>Email</label>
+                <p>{{ order.user.email }}</p>
+            </div>
+            {% if order.user.phone %}
+            <div class="info-group">
+                <label>Account Phone</label>
+                <p>{{ order.user.phone }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="section-card">
+            <h3>Shipping Address</h3>
+            <div class="address-box">
+                {{ order.shipping_address | replace('\n', '<br>') | safe }}
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Payment Info</h3>
+            <div class="info-group">
+                <label>Method</label>
+                <p>{{ order.payment_method }}</p>
+            </div>
+            <div class="info-group">
+                <label>Status</label>
+                <p><span class="status-badge {{ order.payment_status.lower().replace(' ', '-') }}">{{ order.payment_status }}</span></p>
+            </div>
+            {% if order.razorpay_order_id %}
+            <div class="info-group">
+                <label>Razorpay Order ID</label>
+                <p><code>{{ order.razorpay_order_id }}</code></p>
+            </div>
+            {% endif %}
+            {% if order.razorpay_payment_id %}
+            <div class="info-group">
+                <label>Razorpay Payment ID</label>
+                <p><code>{{ order.razorpay_payment_id }}</code></p>
+            </div>
+            {% endif %}
+        </div>
+    </aside>
+</div>
+
+<style>
+    .back-link {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--crimson);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    .status-update-form {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .status-select {
+        padding: 0.5rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+    }
+    .order-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    .detail-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .detail-table th {
+        text-align: left;
+        padding: 1rem;
+        border-bottom: 2px solid #f1f5f9;
+        color: #64748b;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .detail-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .total-row td {
+        font-weight: 700;
+        font-size: 1.1rem;
+        border-bottom: none;
+        padding-top: 1.5rem;
+    }
+    .item-meta {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: 2px;
+    }
+    .info-group {
+        margin-bottom: 1rem;
+    }
+    .info-group label {
+        display: block;
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    .info-group p {
+        margin: 0;
+        font-weight: 500;
+    }
+    .address-box {
+        line-height: 1.6;
+        color: #334155;
+    }
+    .status-badge.paid { background: #f0fdf4; color: #22c55e; }
+    .status-badge.unpaid { background: #fef2f2; color: #ef4444; }
+    .status-badge.partially-paid { background: #fff7ed; color: #f97316; }
+
+    @media (max-width: 992px) {
+        .order-grid { grid-template-columns: 1fr; }
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function adminCancelOrder(orderId) {
+    Swal.fire({
+        title: 'Cancel Order?',
+        text: "Please provide a reason for cancelling this order:",
+        input: 'textarea',
+        inputPlaceholder: 'Reason for cancellation...',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Cancel Order',
+        inputValidator: (value) => {
+            if (!value) return 'A reason is required'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/admin/order/cancel/${orderId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: result.value })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Cancelled', data.message, 'success').then(() => window.location.reload());
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            });
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -17,7 +17,15 @@
                     placeholder="e.g. Floral Silk Saree" required>
             </div>
             <div class="form-group">
-                <label>Price</label>
+                <label>Regular Price (Shown as cutted)</label>
+                <div class="input-with-prefix">
+                    <span class="prefix">₹</span>
+                    <input type="text" name="orig" value="{{ product.orig.replace('₹', '') if product and product.orig }}"
+                        placeholder="2,999">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Sales Price (Highlighted)</label>
                 <div class="input-with-prefix">
                     <span class="prefix">₹</span>
                     <input type="text" name="price" value="{{ product.price.replace('₹', '') if product }}"
@@ -178,8 +186,14 @@
             </div>
 
             <div class="form-group full-width">
-                <label>Description</label>
-                <textarea name="desc" rows="4"
+                <label>Short Description (Displays beside product image)</label>
+                <textarea name="short_desc" rows="2"
+                    placeholder="Brief summary or highlights...">{{ product.short_desc if product }}</textarea>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Long Description</label>
+                <textarea name="desc" rows="12"
                     placeholder="Describe your product...">{{ product.desc if product }}</textarea>
             </div>
         </div>        <div id="variationsSection"

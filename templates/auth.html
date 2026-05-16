@@ -156,6 +156,61 @@
         color: #10b981;
     }
 
+    /* Social Login */
+    .social-divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 1.5rem 0;
+        color: #888;
+        font-size: 0.85rem;
+    }
+
+    .social-divider::before,
+    .social-divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #eee;
+    }
+
+    .social-divider:not(:empty)::before {
+        margin-right: 1rem;
+    }
+
+    .social-divider:not(:empty)::after {
+        margin-left: 1rem;
+    }
+
+    .google-btn {
+        width: 100%;
+        padding: 0.85rem;
+        background: #fff;
+        color: #444;
+        border: 1px solid #e1e1e1;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-decoration: none;
+    }
+
+    .google-btn:hover {
+        background: #f9f9f9;
+        border-color: #ccc;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .google-btn img {
+        width: 20px;
+        height: 20px;
+    }
+
     
 </style>
 {% endblock %}
@@ -189,6 +244,15 @@
                 <input type="password" id="login-password" name="password" placeholder="••••••••" required>
             </div>
             <button type="submit" class="auth-btn">Sign In</button>
+            
+            {# 
+            <div class="social-divider">OR</div>
+            
+            <a href="{{ url_for('auth.google_login') }}" class="google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                Continue with Google
+            </a>
+            #}
             <div class="auth-footer">
                 <p>Forgot your password? <a href="#">Reset it</a></p>
             </div>

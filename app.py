@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+from extensions import oauth
+
 
 load_dotenv()
 
@@ -18,6 +20,26 @@ from routes.admin import admin_bp
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-for-naye-leithe')
 app.jinja_env.add_extension('jinja2.ext.do')
+
+@app.template_filter('optimize')
+def optimize_image(url, width=500, quality='auto'):
+    if not url or 'cloudinary.com' not in url:
+        return url
+    if '/upload/' in url:
+        parts = url.split('/upload/')
+        return f"{parts[0]}/upload/w_{width},q_{quality},f_auto/{parts[1]}"
+    return url
+
+
+oauth.init_app(app)
+google = oauth.register(
+    name='google',
+    client_id=os.getenv('GOOGLE_CLIENT_ID'),
+    client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'},
+)
+
 
 # Database Configuration
 db_url = os.getenv('DATABASE_URL')
@@ -72,10 +94,11 @@ with app.app_context():
             pass  # Vercel serverless has read-only filesystem
             
     # Seed Admin
-    admin_email = 'admin@nayeleithe.com'
+    admin_email = os.getenv('ADMIN_EMAIL', 'admin@nayeleithe.com')
+    admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
     if not User.query.filter_by(email=admin_email).first():
         admin = User(email=admin_email, is_admin=True)
-        admin.set_password('admin123')
+        admin.set_password(admin_password)
         db.session.add(admin)
     
     # Seed default configs
@@ -95,19 +118,29 @@ with app.app_context():
 # Helper function to get global data
 @app.context_processor
 def inject_globals():
-    cart = session.get('cart', {})
-    count = sum(cart.values())
+    from models import Product, Order
+    
+    # Calculate valid wishlist count
     wishlist = session.get('wishlist', [])
-    wishlist_count = len(wishlist)
+    wishlist_count = 0
+    if wishlist:
+        try:
+            wishlist_count = Product.query.filter(Product.id.in_(wishlist)).count()
+        except:
+            wishlist_count = 0
+            
+    # Simple cart count
+    cart = session.get('cart', {})
+    cart_count = sum(cart.values()) if cart else 0
+    
     categories = Category.query.all()
     user = None
     admin_notifications = []
     
     if 'user_id' in session:
-        user = User.query.get(session['user_id'])
+        user = db.session.get(User, session['user_id'])
         if user and user.is_admin:
             # Fetch real notifications for admin
-            from models import Order, Product
             recent_orders = Order.query.order_by(Order.id.desc()).limit(3).all()
             for o in recent_orders:
                 admin_notifications.append({
@@ -125,7 +158,7 @@ def inject_globals():
                 })
 
     return dict(
-        cart_count=count, 
+        cart_count=cart_count, 
         all_categories=categories, 
         current_user=user, 
         wishlist_count=wishlist_count,

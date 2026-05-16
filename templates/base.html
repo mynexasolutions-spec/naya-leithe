@@ -6,90 +6,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Naye Leithe – Discover Your Signature Style{% endblock %}</title>
     <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Great+Vibes&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
 
 <body>
     <div class="app">
-        <!-- Announcement Bar -->
-        <div class="announcement-bar">
-            <img src="https://api.iconify.design/lucide:tag.svg?color=%23ffffff" class="icon-img" alt="tag">
-            <span>30% off storewide — Limited time!</span>
-            <a href="#">Shop Now</a>
-        </div>
+        <!-- Main Header (Sticky) -->
+        <header class="main-header">
+            <!-- Announcement Bar -->
+            <div class="announcement-bar">
+                <img src="https://api.iconify.design/lucide:truck.svg?color=%23ffffff" class="icon-img" alt="shipping">
+                <span>FREE SHIPPING ON ALL ORDERS OVER ₹999</span>
+                <a href="{{ url_for('public.shop') }}">Shop Now</a>
+            </div>
 
-        <!-- Navbar -->
-        <nav>
-            <a href="{{ url_for('public.home') }}" class="nav-logo-link">
-                <img src="{{ url_for('static', filename='images/logo.jpeg') }}" alt="Naye Leithe" class="logo-img">
-                <div class="nav-logo">Naye Leithe</div>
-            </a>
-            <div class="nav-links" id="navLinks">
-                <a href="{{ url_for('public.home') }}"
-                    class="{% if request.endpoint == 'public.home' %}active{% endif %}">Home</a>
-                <div class="dropdown">
-                    <a href="{{ url_for('public.shop') }}"
-                        class="{% if request.endpoint == 'public.shop' %}active{% endif %}">Shop <i
-                            class="fas fa-chevron-down"></i></a>
-                    <div class="dropdown-menu">
-                        {% for cat in all_categories %}
-                        <div class="mega-col">
-                            <div class="cat-group"><a href="{{ url_for('public.shop', category=cat.name) }}">{{ cat.name
-                                    }}</a></div>
-                            {% for sub in cat.subcategories %}
-                            <a href="{{ url_for('public.shop', subcategory=sub.name) }}">{{ sub.name }}</a>
+            <!-- Navbar -->
+            <nav>
+                <a href="{{ url_for('public.home') }}" class="nav-logo-link">
+                    <img src="{{ url_for('static', filename='images/naye-leithe-logo.png') }}" alt="Naye Leithe" class="logo-img">
+                    <div class="nav-logo">Naye Leithe</div>
+                </a>
+                <div class="nav-links" id="navLinks">
+                    <a href="{{ url_for('public.home') }}"
+                        class="{% if request.endpoint == 'public.home' %}active{% endif %}">Home</a>
+                    <div class="dropdown">
+                        <a href="{{ url_for('public.shop') }}"
+                            class="{% if request.endpoint == 'public.shop' %}active{% endif %}">Shop <i
+                                class="fas fa-chevron-down"></i></a>
+                        <div class="dropdown-menu">
+                            {% for cat in all_categories %}
+                            <div class="mega-col">
+                                <div class="cat-group"><a href="{{ url_for('public.shop', category=cat.name) }}">{{ cat.name
+                                        }}</a></div>
+                                {% for sub in cat.subcategories %}
+                                <a href="{{ url_for('public.shop', subcategory=sub.name) }}">{{ sub.name }}</a>
+                                {% endfor %}
+                            </div>
                             {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
+                    <a href="{{ url_for('public.blogs') }}"
+                        class="{% if request.endpoint == 'public.blogs' %}active{% endif %}">Blogs</a>
+                    <a href="{{ url_for('public.about') }}"
+                        class="{% if request.endpoint == 'public.about' %}active{% endif %}">About Us</a>
+                    <a href="{{ url_for('public.contact') }}"
+                        class="{% if request.endpoint == 'public.contact' %}active{% endif %}">Contact Us</a>
                 </div>
-                <a href="{{ url_for('public.blogs') }}"
-                    class="{% if request.endpoint == 'public.blogs' %}active{% endif %}">Blogs</a>
-                <a href="{{ url_for('public.about') }}"
-                    class="{% if request.endpoint == 'public.about' %}active{% endif %}">About Us</a>
-                <a href="{{ url_for('public.contact') }}"
-                    class="{% if request.endpoint == 'public.contact' %}active{% endif %}">Contact Us</a>
-            </div>
-            <div class="nav-actions">
-                <div class="nav-search">
-                    <img src="https://api.iconify.design/lucide:search.svg?color=%238a7f78" class="icon-img"
-                        alt="search">
-                    <input type="text" placeholder="Search Products">
+                <div class="nav-actions">
+                    <div class="nav-search">
+                        <img src="https://api.iconify.design/lucide:search.svg?color=%238a7f78" class="icon-img"
+                            alt="search">
+                        <input type="text" placeholder="Search Products">
+                    </div>
+
+
+                    {% if session.get('is_admin') %}
+                    <a class="nav-icon-btn admin-link" href="{{ url_for('admin.dashboard') }}" title="Admin Dashboard">
+                        <img src="https://api.iconify.design/lucide:shield-check.svg?color=%238b1a2a" alt="admin">
+                    </a>
+                    {% endif %}
+                    <a class="nav-icon-btn" href="{{ url_for('auth.profile') }}" title="My Account">
+                        <img src="https://api.iconify.design/lucide:user.svg?color=%232d2d2d" alt="user">
+                    </a>
+
+                    <a class="nav-icon-btn" href="{{ url_for('public.wishlist') }}">
+                        <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
+                        <span class="badge" id="wishlistBadge">{{ wishlist_count }}</span>
+                    </a>
+
+                    <a class="nav-icon-btn" href="{{ url_for('cart.view_cart') }}">
+                        <img src="https://api.iconify.design/lucide:shopping-bag.svg?color=%232d2d2d" alt="cart">
+                        <span class="badge" id="cartBadge">{{ cart_count }}</span>
+                    </a>
                 </div>
-
-
-                {% if session.get('user_id') %}
-                {% if session.get('is_admin') %}
-                <a class="nav-icon-btn admin-link" href="{{ url_for('admin.dashboard') }}" title="Admin Dashboard">
-                    <img src="https://api.iconify.design/lucide:shield-check.svg?color=%238b1a2a" alt="admin">
-                </a>
-                {% endif %}
-                <a class="nav-icon-btn" href="{{ url_for('auth.profile') }}" title="My Profile">
-                    <img src="https://api.iconify.design/lucide:user.svg?color=%232d2d2d" alt="user">
-                </a>
-                {% else %}
-                <a href="{{ url_for('auth.login') }}" class="nav-auth-link">Login / Signup</a>
-                {% endif %}
-
-                <a class="nav-icon-btn" href="{{ url_for('public.wishlist') }}">
-                    <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
-                    <span class="badge" id="wishlistBadge">{{ wishlist_count }}</span>
-                </a>
-
-                <a class="nav-icon-btn" href="{{ url_for('cart.view_cart') }}">
-                    <img src="https://api.iconify.design/lucide:shopping-bag.svg?color=%232d2d2d" alt="cart">
-                    <span class="badge" id="cartBadge">{{ cart_count }}</span>
-                </a>
-            </div>
-            <div class="menu-toggle" id="menuToggle">
-                <img src="https://api.iconify.design/lucide:menu.svg?color=%238b1a2a" class="icon-img" alt="menu"
-                    id="menuIcon">
-            </div>
-        </nav>
+                <div class="menu-toggle" id="menuToggle">
+                    <img src="https://api.iconify.design/lucide:menu.svg?color=%238b1a2a" class="icon-img" alt="menu"
+                        id="menuIcon">
+                </div>
+            </nav>
+        </header>
 
         <main>
             {% block content %}{% endblock %}
@@ -246,18 +246,38 @@
             color: var(--crimson);
             font-size: 16px;
         }
+        .product-card {
+            cursor: pointer;
+        }
     </style>
 
     <script>
-        // Add to Cart AJAX
+        // Global Product Card & Add to Cart Logic
         document.addEventListener('click', function (e) {
-            if (e.target && e.target.classList.contains('product-add-btn') || e.target.closest('.add-to-cart')) {
+            // 1. Handle Card Click (except for buttons/links)
+            const card = e.target.closest('.product-card');
+            if (card && !e.target.closest('button') && !e.target.closest('a') && !e.target.closest('.product-wishlist')) {
+                const link = card.querySelector('a');
+                if (link) {
+                    window.location.href = link.href;
+                    return;
+                }
+            }
+
+            // 2. Handle Add to Cart
+            const btn = e.target.classList.contains('product-add-btn') ? e.target : e.target.closest('.add-to-cart');
+            if (btn) {
+                // If it's a link (like "Select Options"), let it behave naturally
+                if (btn.tagName === 'A') return;
+                
+                // If the button has an inline onclick (like on product detail page), don't handle it here
+                if (btn.getAttribute('onclick')) return;
+                
                 e.preventDefault();
-                const btn = e.target.classList.contains('product-add-btn') ? e.target : e.target.closest('.add-to-cart');
                 let productId = btn.getAttribute('data-id');
+                const varId = btn.getAttribute('data-var-id');
 
                 if (!productId) {
-                    const card = btn.closest('.product-card');
                     if (card) {
                         const link = card.querySelector('a');
                         if (link) {
@@ -270,8 +290,12 @@
                 }
 
                 if (productId) {
+                    const formData = new FormData();
+                    if (varId) formData.append('variation_id', varId);
+
                     fetch(`/add-to-cart/${productId}`, {
                         method: 'POST',
+                        body: formData,
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
@@ -284,9 +308,9 @@
 
                                 const originalText = btn.innerText;
                                 btn.innerText = 'Added!';
-                                btn.style.background = 'var(--gold)';
+                                btn.style.background = '#10b981';
                                 btn.style.color = '#fff';
-                                btn.style.borderColor = 'var(--gold)';
+                                btn.style.borderColor = '#10b981';
 
                                 setTimeout(() => {
                                     btn.innerText = originalText;

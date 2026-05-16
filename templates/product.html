@@ -23,29 +23,30 @@
                         {% endfor %}
                     {% endif %}
                 {% endif %}
-                <img src="{{ initial_img }}" alt="{{ product.name }}" id="mainProductImg">
+                <img src="{{ initial_img | optimize(width=800) }}" alt="{{ product.name }}" id="mainProductImg">
             </div>
 
             {# Thumbnails #}
             <div class="gallery-thumbnails" id="galleryThumbs">
-                <div class="thumb active" onclick="changeMainImg('{{ product.img }}', this)" data-attr-val="none">
-                    <img src="{{ product.img }}" alt="Main">
+                <div class="thumb active" onclick="changeMainImg('{{ product.img | optimize(width=800) }}', this)" data-attr-val="none">
+                    <img src="{{ product.img | optimize(width=150) }}" alt="Main">
                 </div>
                 {% for p_img in product.images %}
                 <div class="thumb" 
-                    onclick="changeMainImg('{{ p_img.img_url }}', this)" 
+                    onclick="changeMainImg('{{ p_img.img_url | optimize(width=800) }}', this)" 
                     data-attr-val="{{ p_img.attribute_value_id or 'none' }}"
                     style="display: {{ 'block' if not selected_variation or p_img.attribute_value_id == color_opt.attribute_value_id else 'none' }}">
-                    <img src="{{ p_img.img_url }}" alt="Gallery">
+                    <img src="{{ p_img.img_url | optimize(width=150) }}" alt="Gallery">
                 </div>
                 {% endfor %}
+                {% if product.size_chart %}
+                <div class="thumb" 
+                    onclick="changeMainImg('{{ product.size_chart }}', this)" 
+                    data-attr-val="none">
+                    <img src="{{ product.size_chart }}" alt="Size Chart" style="object-fit: contain; background: #fff;">
+                </div>
+                {% endif %}
             </div>
-
-            {% if product.size_chart %}
-            <div class="size-chart-link-wrap">
-                <a href="#sizeChartModal" class="size-chart-link"><i class="fas fa-ruler-combined"></i> View Size Chart</a>
-            </div>
-            {% endif %}
         </div>
 
         <!-- RIGHT: INFO SECTION -->
@@ -73,55 +74,151 @@
                 {% endif %}
             </div>
 
-            <p class="description">
-                {{ product.desc or 'Exquisite fashion piece designed for elegance and comfort.' }}
+            {% if product.short_desc and product.short_desc.lower() != 'none' %}
+            <p class="description" style="font-size: 15px; margin-bottom: 24px;">
+                {{ product.short_desc }}
             </p>
+            {% endif %}
+
 
             {# Dynamic Attributes #}
             {% for p_attr in product.attributes %}
             <div class="variant-sect">
-                <div class="variant-header">
-                    <h4>Select {{ p_attr.attribute.name }}</h4>
-                </div>
                 <div class="selector-group {{ 'color-options' if 'color' in p_attr.attribute.name.lower() else '' }}" id="attr-{{ p_attr.attribute.id }}">
-                    {% set used_value_ids = product.variations|map(attribute='options')|sum(start=[])|map(attribute='attribute_value_id')|unique|list %}
-                    {% for val in p_attr.attribute.values if val.id in used_value_ids %}
-                    {# Check if this value is selected in the current variation deep-link #}
-                    {% set is_active = false %}
-                    {% if selected_variation %}
-                        {% for opt in selected_variation.options if opt.attribute_value_id == val.id %}
-                            {% set is_active = true %}
-                        {% endfor %}
-                    {% elif loop.first %}
-                        {% set is_active = true %}
-                    {% endif %}
-
-                    <button class="attr-btn {{ 'active' if is_active }}" 
-                        data-attr-id="{{ p_attr.attribute.id }}" 
-                        data-val-id="{{ val.id }}"
-                        onclick="handleAttrSelect(this)">
-                        {% if val.image_url %}
-                        <img src="{{ val.image_url }}" class="swatch-img" alt="{{ val.value }}">
+                    <select class="attr-select" data-attr-id="{{ p_attr.attribute.id }}" onchange="handleAttrSelect(this)">
+                        <option value="" disabled {% if not selected_variation %}selected{% endif %}>Select {{ p_attr.attribute.name }}</option>
+                        {% set used_value_ids = product.variations|map(attribute='options')|sum(start=[])|map(attribute='attribute_value_id')|unique|list %}
+                        {% for val in p_attr.attribute.values if val.id in used_value_ids %}
+                        {# Check if this value is selected in the current variation deep-link #}
+                        {% set is_active = false %}
+                        {% if selected_variation %}
+                            {% for opt in selected_variation.options if opt.attribute_value_id == val.id %}
+                                {% set is_active = true %}
+                            {% endfor %}
                         {% endif %}
-                        {{ val.value }}
-                    </button>
-                    {% endfor %}
+                        <option value="{{ val.id }}" {% if is_active %}selected{% endif %}>{{ val.value }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
             {% endfor %}
 
             <div class="action-btns">
                 <button class="add-to-cart" data-id="{{ product.id }}" onclick="addToCart(this)">Add to Cart</button>
-                <button class="wishlist-btn-large {% if product.id in session.get('wishlist', []) %}active{% endif %}"
-                    onclick="toggleWishlist(event, '{{ product.id }}', true)">
-                    <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
-                </button>
+                <div class="wishlist-btn-large-wrap">
+                    <button class="wishlist-btn-large {% if product.id in session.get('wishlist', []) %}active{% endif %}"
+                        onclick="toggleWishlist(event, '{{ product.id }}', true)">
+                        <img src="https://api.iconify.design/lucide:heart.svg?color=%238b1a2a" alt="wishlist">
+                    </button>
+                </div>
             </div>
 
-            <div class="trust-points">
+
+        </div>
+    </div>
+
+    <div class="product-description-table-container">
+        <div class="desc-table-wrapper">
+            <h3>Product Details</h3>
+            <table class="product-desc-table">
+                <tbody>
+                    {% set raw_desc = product.desc if product.desc and product.desc.lower() != 'none' else 'Exquisite fashion piece designed for elegance and comfort, crafted with the finest materials to ensure both style and durability.' %}
+                    {% set has_bullets = '*' in raw_desc or '\n' in raw_desc %}
+                    {% if has_bullets and ':' in raw_desc %}
+                        {% set lines = raw_desc.split('\n') %}
+                        {% if lines|length <= 2 %}
+                            {% set lines = raw_desc.split('*') %}
+                        {% endif %}
+                        
+                        {% for line in lines %}
+                            {% set clean_line = line|replace('**', '')|trim %}
+                            {% if clean_line %}
+                                {% if ':' in clean_line %}
+                                    {% set parts = clean_line.split(':', 1) %}
+                                    <tr>
+                                        <th>{{ parts[0]|trim|replace('*', '') }}</th>
+                                        <td>{{ parts[1]|trim }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="2" style="padding: 16px; line-height: 1.6; color: var(--muted); border-bottom: 1px solid var(--sand);">{{ clean_line|replace('*', '') }}</td>
+                                    </tr>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <th>Description</th>
+                            <td>{{ raw_desc }}</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <th>Category</th>
+                        <td>{{ product.category.name if product.category else product.cat_name }}{% if product.subcategory %} / {{ product.subcategory.name }}{% endif %}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="trust-points-horizontal">
                 <div class="point">✨ Authentic Handloom</div>
                 <div class="point">🚚 Free Shipping across India</div>
                 <div class="point">🔄 7-Day Easy Returns</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REVIEWS SECTION -->
+    <div class="product-reviews-section" style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+        <h3 style="font-family: 'Playfair Display', serif; font-size: 24px; margin-bottom: 30px; border-bottom: 2px solid var(--sand); padding-bottom: 10px;">Customer Reviews</h3>
+        
+        <div class="reviews-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+            <!-- List of Reviews -->
+            <div class="reviews-list">
+                {% if reviews %}
+                    {% for review in reviews %}
+                    <div class="review-item" style="background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid var(--sand);">
+                        <div class="review-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong style="color: var(--text);">{{ review.customer_name }}</strong>
+                            <div class="review-stars" style="color: var(--gold);">
+                                {% for i in range(review.rating) %}★{% endfor %}
+                                {% for i in range(5 - review.rating) %}☆{% endfor %}
+                            </div>
+                        </div>
+                        <p style="font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 8px;">{{ review.comment }}</p>
+                        <small style="color: var(--muted); font-size: 11px;">{{ review.date.strftime('%d %b, %Y') }}</small>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-reviews" style="text-align: center; padding: 40px; background: #fff; border-radius: 12px; border: 1px dashed var(--muted);">
+                        <img src="https://api.iconify.design/lucide:message-square.svg?color=%23a68b8f" style="width: 48px; margin-bottom: 15px;" alt="no-reviews">
+                        <p style="color: var(--muted);">No reviews yet. Be the first to share your thoughts!</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Add Review Form -->
+            <div class="add-review-box" style="background: var(--warm-white); padding: 30px; border-radius: 16px; border: 1.5px solid var(--sand); height: fit-content;">
+                <h4 style="font-family: 'Playfair Display', serif; margin-bottom: 20px;">Add a Review</h4>
+                <form id="reviewForm" onsubmit="submitReview(event)">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-size: 13px; margin-bottom: 5px; color: var(--muted);">Your Name</label>
+                        <input type="text" name="name" placeholder="Enter your name" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--sand); outline: none;" value="{{ session.get('username', '') }}">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-size: 13px; margin-bottom: 5px; color: var(--muted);">Rating</label>
+                        <div class="rating-input" id="starContainer" style="display: flex; gap: 10px; color: var(--gold); font-size: 24px; cursor: pointer;">
+                            {% for i in range(1, 6) %}
+                            <span class="star" data-value="{{ i }}" onclick="setRating({{ i }})">☆</span>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="rating" id="reviewRating" value="">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 13px; margin-bottom: 5px; color: var(--muted);">Comment</label>
+                        <textarea name="comment" placeholder="Write your review here..." rows="4" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--sand); outline: none; resize: vertical;"></textarea>
+                    </div>
+                    <button type="submit" style="width: 100%; padding: 14px; background: var(--crimson); color: white; border: none; border-radius: 30px; font-weight: 600; cursor: pointer; transition: 0.3s;">Submit Review</button>
+                </form>
             </div>
         </div>
     </div>
@@ -137,16 +234,7 @@
     </section>
 </div>
 
-<!-- Size Chart Modal -->
-{% if product.size_chart %}
-<div id="sizeChartModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>Size Chart</h2>
-        <img src="{{ product.size_chart }}" alt="Size Chart" style="width: 100%; border-radius: 10px;">
-    </div>
-</div>
-{% endif %}
+
 
 <style>
     .size-chart-link-wrap {
@@ -180,6 +268,32 @@
         flex-wrap: wrap;
         gap: 12px;
         margin-bottom: 24px;
+        width: 100%;
+    }
+
+    .attr-select {
+        width: 100%;
+        max-width: 300px;
+        padding: 12px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        background-color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        outline: none;
+        cursor: pointer;
+        font-family: inherit;
+        transition: border-color 0.3s;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%231e293b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+        background-repeat: no-repeat;
+        background-position: right 15px top 50%;
+        background-size: 12px auto;
+    }
+
+    .attr-select:focus, .attr-select:hover {
+        border-color: var(--crimson);
     }
 
     .attr-btn {
@@ -290,14 +404,10 @@
         if (thumb) thumb.classList.add('active');
     }
 
-    function handleAttrSelect(btn) {
-        const group = btn.closest('.selector-group');
-        group.querySelectorAll('.attr-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
+    function handleAttrSelect(select) {
         // Instant Image Update: Find first variation that matches this specific attribute value
-        const valId = btn.getAttribute('data-val-id');
-        const attrId = btn.getAttribute('data-attr-id');
+        const valId = select.value;
+        const attrId = select.getAttribute('data-attr-id');
         const firstMatch = variations.find(v => v.options[attrId] == valId);
         
         if (firstMatch && firstMatch.img && firstMatch.img !== 'None' && firstMatch.img !== '') {
@@ -305,7 +415,7 @@
         }
 
         // Check if it's a color selection to filter gallery
-        const attrName = btn.closest('.variant-sect').querySelector('h4').innerText.toLowerCase();
+        const attrName = select.closest('.variant-sect').querySelector('h4').innerText.toLowerCase();
         if (attrName.includes('color')) {
             filterGallery(valId);
         }
@@ -334,8 +444,8 @@
 
     function updateVariationInfo() {
         const selected = {};
-        document.querySelectorAll('.attr-btn.active').forEach(btn => {
-            selected[btn.getAttribute('data-attr-id')] = btn.getAttribute('data-val-id');
+        document.querySelectorAll('.attr-select').forEach(select => {
+            selected[select.getAttribute('data-attr-id')] = select.value;
         });
 
         const match = variations.find(v => {
@@ -368,21 +478,39 @@
     function addToCart(btn) {
         const productId = btn.getAttribute('data-id');
         const selected = {};
-        document.querySelectorAll('.attr-btn.active').forEach(btn => {
-            selected[btn.getAttribute('data-attr-id')] = btn.getAttribute('data-val-id');
+        const attrSelects = document.querySelectorAll('.attr-select');
+        
+        attrSelects.forEach(select => {
+            selected[select.getAttribute('data-attr-id')] = select.value;
         });
 
-        const match = variations.find(v => {
-            return Object.keys(v.options).every(attrId => v.options[attrId] == selected[attrId]);
-        });
+        let variationId = null;
 
-        if (!match) {
-            alert("Please select all options.");
-            return;
+        if (variations.length > 0) {
+            // Check if all selects have a value
+            let allSelected = true;
+            attrSelects.forEach(select => {
+                if (!select.value) allSelected = false;
+            });
+
+            const match = variations.find(v => {
+                return Object.keys(v.options).every(attrId => v.options[attrId] == selected[attrId]);
+            });
+
+            if (!allSelected || !match) {
+                Swal.fire({
+                    title: 'Selection Required',
+                    text: 'Please select all options (like Size and Color) before adding to bag.',
+                    icon: 'warning',
+                    confirmButtonColor: '#8b1a2a'
+                });
+                return;
+            }
+            variationId = match.id;
         }
 
         const formData = new FormData();
-        formData.append('variation_id', match.id);
+        if (variationId) formData.append('variation_id', variationId);
 
         fetch(`/add-to-cart/${productId}`, {
             method: 'POST',
@@ -426,6 +554,52 @@
         if (event.target == modal) {
             modal.style.display = "none";
         }
+    }
+    function setRating(val) {
+        document.getElementById('reviewRating').value = val;
+        const stars = document.querySelectorAll('#starContainer .star');
+        stars.forEach((star, index) => {
+            if (index < val) {
+                star.innerText = '★';
+                star.style.color = 'var(--gold)';
+            } else {
+                star.innerText = '☆';
+                star.style.color = 'var(--muted)';
+            }
+        });
+    }
+
+    function submitReview(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const productId = '{{ product.id }}';
+
+        if (!formData.get('rating')) {
+            Swal.fire('Rating Required', 'Please select a star rating.', 'warning');
+            return;
+        }
+
+        fetch(`/add-review/${productId}`, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    title: 'Success!',
+                    text: data.message,
+                    icon: 'success',
+                    confirmButtonColor: '#8b1a2a'
+                });
+                form.reset();
+                setRating(0);
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        });
     }
 </script>
 {% endblock %}

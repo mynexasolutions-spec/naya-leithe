@@ -7,11 +7,11 @@ db = SQLAlchemy()
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(512), nullable=False)
+    password_hash = db.Column(db.String(512), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Profile Details
+    # Profile Details (Legacy single address, keeping for backward compatibility)
     username = db.Column(db.String(80))
     phone = db.Column(db.String(20))
     address = db.Column(db.Text)
@@ -19,6 +19,7 @@ class User(db.Model):
     zipcode = db.Column(db.String(10))
     
     orders = db.relationship('Order', backref='user', lazy=True)
+    addresses = db.relationship('Address', backref='user', lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -28,6 +29,23 @@ class User(db.Model):
 
     def __repr__(self):
         return f"<User {self.email}>"
+
+class Address(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    label = db.Column(db.String(50), nullable=True) # e.g., Home, Work
+    full_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    address_line_1 = db.Column(db.String(255), nullable=False)
+    address_line_2 = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(100), nullable=False)
+    state = db.Column(db.String(100), nullable=True)
+    pincode = db.Column(db.String(20), nullable=False)
+    country = db.Column(db.String(100), default='India')
+    is_default = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return f"<Address {self.label} - {self.city}>"
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -53,6 +71,7 @@ class Product(db.Model):
     badge = db.Column(db.String(50))
     img = db.Column(db.String(512), nullable=False)
     desc = db.Column(db.Text)
+    short_desc = db.Column(db.Text)
     sizes = db.Column(db.String(100))
     colors = db.Column(db.String(100))
     size_chart = db.Column(db.String(512))
@@ -70,6 +89,7 @@ class SubCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
+    img = db.Column(db.String(255))
     products = db.relationship('Product', backref='subcategory', lazy=True)
 
     def __repr__(self):
@@ -93,6 +113,16 @@ class Order(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
     total_amount = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(50), default='Pending')
+    
+    # New Payment Fields
+    payment_method = db.Column(db.String(50), default='COD') # 'COD', 'Online', 'Partial'
+    payment_status = db.Column(db.String(50), default='Unpaid') # 'Unpaid', 'Partially Paid', 'Paid'
+    shipping_address = db.Column(db.Text, nullable=True)
+    amount_paid = db.Column(db.Float, default=0.0)
+    razorpay_order_id = db.Column(db.String(100), nullable=True)
+    razorpay_payment_id = db.Column(db.String(100), nullable=True)
+    cancel_reason = db.Column(db.String(255), nullable=True)
+
     items = db.relationship('OrderItem', backref='order', lazy=True)
 
 class OrderItem(db.Model):
@@ -101,6 +131,8 @@ class OrderItem(db.Model):
     product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     price_at_time = db.Column(db.String(20), nullable=False)
+    variation_id = db.Column(db.Integer, db.ForeignKey('product_variation.id'), nullable=True)
+    variation_details = db.Column(db.Text, nullable=True)
     product = db.relationship('Product')
 
 class AppConfig(db.Model):
@@ -169,7 +201,7 @@ class Review(db.Model):
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='Approved')
+    status = db.Column(db.String(20), default='Pending')
     is_featured = db.Column(db.Boolean, default=False)
     product = db.relationship('Product', backref=db.backref('reviews', lazy=True))
     user_rel = db.relationship('User', backref=db.backref('reviews', lazy=True))

@@ -1,5 +1,13 @@
 from flask import Blueprint, render_template, session, redirect, url_for, abort, request, flash, jsonify
 from functools import wraps
+
+def slugify(text):
+    if not text:
+        return str(int(datetime.now().timestamp()))
+    text = text.lower()
+    text = re.sub(r'[^\w\s-]', '', text)
+    text = re.sub(r'[\s_-]+', '-', text)
+    return text.strip('-')
 from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand, Review, Coupon
 from datetime import datetime
 import os
@@ -15,7 +23,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('auth.login'))
-        user = User.query.get(session['user_id'])
+        user = db.session.get(User, session['user_id'])
         if not user or not user.is_admin:
             abort(403)
         return f(*args, **kwargs)
@@ -94,10 +102,14 @@ def new_product():
         name = request.form.get('name')
         price_raw = request.form.get('price', '').replace('₹', '').strip()
         price = price_raw if price_raw else '0'
+        orig_raw = request.form.get('orig', '').replace('₹', '').strip()
+        orig = f"₹{orig_raw}" if orig_raw else None
+        
         badge = request.form.get('badge')
         sizes = request.form.get('sizes')
         colors = request.form.get('colors')
         desc = request.form.get('desc')
+        short_desc = request.form.get('short_desc')
         product_type = request.form.get('product_type', 'simple')
         stock_status = request.form.get('stock_status', 'instock')
         category_id = request.form.get('category_id') or None
@@ -105,7 +117,7 @@ def new_product():
         brand_id = request.form.get('brand_id') or None
         is_featured = True if request.form.get('is_featured') == 'on' else False
         
-        category = Category.query.get(category_id)
+        category = db.session.get(Category, category_id)
         cat_name = category.name if category else 'Uncategorized'
         
         # Handle File Uploads
@@ -115,29 +127,41 @@ def new_product():
         img = save_image(img_file, 'products') if img_file else None
         size_chart = save_image(size_chart_file, 'size_charts') if size_chart_file else None
         
-        new_id = name.lower().replace(' ', '-')
-        if Product.query.get(new_id):
-            new_id = f"{new_id}-{int(datetime.now().timestamp())}"
+        new_id = slugify(name)
+        # Ensure ID is unique
+        base_id = new_id
+        counter = 1
+        while db.session.get(Product, new_id):
+            new_id = f"{base_id}-{counter}"
+            counter += 1
             
-        product = Product(
-            id=new_id, 
-            name=name, 
-            price=f"₹{price}", 
-            cat_name=cat_name, 
-            category_id=category_id,
-            sub_category_id=sub_category_id,
-            brand_id=brand_id,
-            badge=badge, 
-            img=img,
-            sizes=sizes,
-            colors=colors,
-            size_chart=size_chart,
-            desc=desc,
-            product_type=product_type,
-            stock_status=stock_status,
-            is_featured=is_featured
-        )
-        db.session.add(product)
+        try:
+            product = Product(
+                id=new_id, 
+                name=name, 
+                price=f"₹{price}", 
+                orig=orig,
+                cat_name=cat_name, 
+                category_id=category_id,
+                sub_category_id=sub_category_id,
+                brand_id=brand_id,
+                badge=badge, 
+                img=img,
+                sizes=sizes,
+                colors=colors,
+                size_chart=size_chart,
+                desc=desc,
+                short_desc=short_desc,
+                product_type=product_type,
+                stock_status=stock_status,
+                is_featured=is_featured
+            )
+            db.session.add(product)
+            db.session.flush() # Flush to get product object ready for relations
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating product: {str(e)}', 'error')
+            return redirect(url_for('admin.new_product'))
         
         # Handle Product Attributes
         selected_attr_ids = request.form.getlist('product_attributes[]')
@@ -210,7 +234,7 @@ def new_product():
 @admin_bp.route('/admin/product/edit/<id>', methods=['GET', 'POST'])
 @admin_required
 def edit_product(id):
-    product = Product.query.get(id)
+    product = db.session.get(Product, id)
     if not product:
         abort(404)
         
@@ -218,11 +242,15 @@ def edit_product(id):
         product.name = request.form.get('name')
         price = request.form.get('price').replace('₹', '').strip()
         product.price = f"₹{price}"
+        orig_raw = request.form.get('orig', '').replace('₹', '').strip()
+        product.orig = f"₹{orig_raw}" if orig_raw else None
+        
         product.cat_name = request.form.get('cat_name')
         product.badge = request.form.get('badge')
         product.sizes = request.form.get('sizes')
         product.colors = request.form.get('colors')
         product.desc = request.form.get('desc')
+        product.short_desc = request.form.get('short_desc')
         product.product_type = request.form.get('product_type', 'simple')
         product.stock_status = request.form.get('stock_status', 'instock')
         
@@ -232,7 +260,7 @@ def edit_product(id):
         product.brand_id = request.form.get('brand_id') or None
         product.is_featured = True if request.form.get('is_featured') == 'on' else False
         
-        category = Category.query.get(category_id)
+        category = db.session.get(Category, category_id)
         if category:
             product.cat_name = category.name
         
@@ -256,7 +284,8 @@ def edit_product(id):
         # Handle removed gallery images
         remove_gallery_ids = request.form.getlist('remove_gallery[]')
         for img_id in remove_gallery_ids:
-            p_img = ProductImage.query.get(img_id)
+            from models import ProductImage
+            p_img = db.session.get(ProductImage, img_id)
             if p_img:
                 delete_image(p_img.img_url)
                 db.session.delete(p_img)
@@ -329,7 +358,7 @@ def delete_product(id):
     if request.form.get('csrf_token') != session.get('csrf_token'):
         abort(403, "CSRF validation failed – token missing")
         
-    product = Product.query.get(id)
+    product = db.session.get(Product, id)
     if product:
         # Delete from Cloudinary
         delete_image(product.img)
@@ -362,6 +391,24 @@ def new_category():
         return redirect(url_for('admin.categories'))
     return render_template('admin/category_form.html')
 
+@admin_bp.route('/admin/category/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_category(id):
+    cat = db.session.get(Category, id)
+    if not cat:
+        abort(404)
+    if request.method == 'POST':
+        cat.name = request.form.get('name')
+        img_file = request.files.get('img')
+        if img_file and img_file.filename:
+            if cat.img:
+                delete_image(cat.img)
+            cat.img = save_image(img_file, 'categories')
+        db.session.commit()
+        flash('Category updated successfully!', 'success')
+        return redirect(url_for('admin.categories'))
+    return render_template('admin/category_form.html', category=cat)
+
 @admin_bp.route('/admin/category/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_category(id):
@@ -369,7 +416,7 @@ def delete_category(id):
     if request.form.get('csrf_token') != session.get('csrf_token'):
         abort(403, "CSRF validation failed – token missing")
         
-    category = Category.query.get(id)
+    category = db.session.get(Category, id)
     if category:
         delete_image(category.img)
         db.session.delete(category)
@@ -383,8 +430,10 @@ def new_subcategory():
     if request.method == 'POST':
         name = request.form.get('name')
         category_id = request.form.get('category_id')
+        img_file = request.files.get('img')
+        img = save_image(img_file, 'subcategories') if img_file else None
         
-        subcategory = SubCategory(name=name, category_id=category_id)
+        subcategory = SubCategory(name=name, category_id=category_id, img=img)
         db.session.add(subcategory)
         db.session.commit()
         flash('SubCategory added successfully!', 'success')
@@ -399,12 +448,34 @@ def delete_subcategory(id):
     if request.form.get('csrf_token') != session.get('csrf_token'):
         abort(403, "CSRF validation failed – token missing")
         
-    subcategory = SubCategory.query.get(id)
+    subcategory = db.session.get(SubCategory, id)
     if subcategory:
+        if subcategory.img:
+            delete_image(subcategory.img)
         db.session.delete(subcategory)
         db.session.commit()
         flash('SubCategory deleted!', 'success')
-    return redirect(url_for('admin.categories'))
+        return redirect(url_for('admin.categories'))
+
+@admin_bp.route('/admin/subcategory/edit/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def edit_subcategory(id):
+    sub = db.session.get(SubCategory, id)
+    if not sub:
+        abort(404)
+    if request.method == 'POST':
+        sub.name = request.form.get('name')
+        sub.category_id = request.form.get('category_id')
+        img_file = request.files.get('img')
+        if img_file and img_file.filename:
+            if sub.img:
+                delete_image(sub.img)
+            sub.img = save_image(img_file, 'subcategories')
+        db.session.commit()
+        flash('SubCategory updated!', 'success')
+        return redirect(url_for('admin.categories'))
+    categories = Category.query.all()
+    return render_template('admin/subcategory_form.html', categories=categories, subcategory=sub)
 
 # --- CUSTOMER ROUTES ---
 
@@ -417,7 +488,7 @@ def customers():
 @admin_bp.route('/admin/customer/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_customer(id):
-    user = User.query.get(id)
+    user = db.session.get(User, id)
     if user:
         # Check if user has orders before deleting, or handle cascade
         db.session.delete(user)
@@ -432,10 +503,43 @@ def delete_customer(id):
 def orders():
     customer_id = request.args.get('customer_id')
     if customer_id:
-        all_orders = Order.query.filter_by(user_id=customer_id).all()
+        all_orders = Order.query.filter_by(user_id=customer_id).order_by(Order.date.desc()).all()
     else:
-        all_orders = Order.query.all()
+        all_orders = Order.query.order_by(Order.date.desc()).all()
     return render_template('admin/orders.html', orders=all_orders)
+
+@admin_bp.route('/admin/order/<int:id>')
+@admin_required
+def view_order(id):
+    order = db.session.get(Order, id)
+    if not order:
+        abort(404)
+    return render_template('admin/order_detail.html', order=order)
+
+@admin_bp.route('/admin/order/update-status/<int:id>', methods=['POST'])
+@admin_required
+def update_order_status(id):
+    order = db.session.get(Order, id)
+    if order:
+        new_status = request.form.get('status')
+        if new_status:
+            order.status = new_status
+            db.session.commit()
+            flash(f'Order #{order.order_number} status updated to {new_status}!', 'success')
+    return redirect(request.referrer or url_for('admin.orders'))
+
+@admin_bp.route('/admin/order/cancel/<int:id>', methods=['POST'])
+@admin_required
+def admin_cancel_order(id):
+    order = db.session.get(Order, id)
+    if order:
+        data = request.get_json()
+        reason = data.get('reason', 'Cancelled by admin')
+        order.status = 'Cancelled'
+        order.cancel_reason = reason
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Order #{order.order_number} cancelled.'})
+    return jsonify({'success': False, 'message': 'Order not found.'})
 
 # --- SETTINGS ---
 
@@ -443,13 +547,29 @@ def orders():
 @admin_required
 def settings():
     if request.method == 'POST':
-        for key, value in request.form.items():
+        # List all expected checkbox/boolean keys
+        bool_keys = ['shipping_enabled', 'payment_method_cod', 'payment_method_online', 'partial_payment_enabled']
+        
+        # Handle all form data
+        for key in request.form:
+            value = request.form.get(key)
             config = AppConfig.query.filter_by(key=key).first()
             if config:
                 config.value = value
             else:
                 new_config = AppConfig(key=key, value=value)
                 db.session.add(new_config)
+        
+        # Explicitly set booleans that were NOT in the form to 'false'
+        for b_key in bool_keys:
+            if b_key not in request.form:
+                config = AppConfig.query.filter_by(key=b_key).first()
+                if config:
+                    config.value = 'false'
+                else:
+                    new_config = AppConfig(key=b_key, value='false')
+                    db.session.add(new_config)
+
         db.session.commit()
         flash('Settings updated successfully!', 'success')
         return redirect(url_for('admin.settings'))
@@ -498,7 +618,7 @@ def admin_attribute_new():
 @admin_bp.route('/admin/attribute/edit/<int:attr_id>', methods=['GET', 'POST'])
 @admin_required
 def admin_attribute_edit(attr_id):
-    attribute = Attribute.query.get(attr_id)
+    attribute = db.session.get(Attribute, attr_id)
     if not attribute:
         abort(404)
         
@@ -518,7 +638,7 @@ def admin_attribute_edit(attr_id):
 @admin_bp.route('/admin/attribute/delete/<int:attr_id>', methods=['POST'])
 @admin_required
 def admin_attribute_delete(attr_id):
-    attribute = Attribute.query.get(attr_id)
+    attribute = db.session.get(Attribute, attr_id)
     if attribute:
         db.session.delete(attribute)
         db.session.commit()
@@ -528,7 +648,7 @@ def admin_attribute_delete(attr_id):
 @admin_bp.route('/admin/attribute/<int:attr_id>/values', methods=['GET', 'POST'])
 @admin_required
 def admin_attribute_values(attr_id):
-    attribute = Attribute.query.get(attr_id)
+    attribute = db.session.get(Attribute, attr_id)
     if not attribute:
         abort(404)
         
@@ -548,7 +668,7 @@ def admin_attribute_values(attr_id):
 @admin_bp.route('/admin/attribute/value/delete/<int:val_id>', methods=['POST'])
 @admin_required
 def admin_attribute_value_delete(val_id):
-    val = AttributeValue.query.get(val_id)
+    val = db.session.get(AttributeValue, val_id)
     if val:
         attr_id = val.attribute_id
         db.session.delete(val)
@@ -606,7 +726,7 @@ def delete_brand(id):
     if request.form.get('csrf_token') != session.get('csrf_token'):
         abort(403, "CSRF validation failed – token missing")
         
-    brand = Brand.query.get(id)
+    brand = db.session.get(Brand, id)
     if brand:
         delete_image(brand.logo)
         db.session.delete(brand)
@@ -646,7 +766,7 @@ def new_review():
 @admin_bp.route('/admin/review/edit/<int:id>', methods=['POST'])
 @admin_required
 def edit_review(id):
-    review = Review.query.get(id)
+    review = db.session.get(Review, id)
     if review:
         review.customer_name = request.form.get('customer_name')
         review.customer_location = request.form.get('customer_location')
@@ -660,7 +780,7 @@ def edit_review(id):
 @admin_bp.route('/admin/review/status/<int:id>', methods=['POST'])
 @admin_required
 def review_status(id):
-    review = Review.query.get(id)
+    review = db.session.get(Review, id)
     if review:
         status = request.form.get('status')
         if status in ['Approved', 'Rejected', 'Pending']:
@@ -672,7 +792,7 @@ def review_status(id):
 @admin_bp.route('/admin/review/toggle-featured/<int:id>', methods=['POST'])
 @admin_required
 def review_toggle_featured(id):
-    review = Review.query.get(id)
+    review = db.session.get(Review, id)
     if review:
         review.is_featured = not review.is_featured
         db.session.commit()
@@ -683,7 +803,7 @@ def review_toggle_featured(id):
 @admin_bp.route('/admin/review/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_review(id):
-    review = Review.query.get(id)
+    review = db.session.get(Review, id)
     if review:
         db.session.delete(review)
         db.session.commit()
@@ -724,7 +844,7 @@ def new_coupon():
 @admin_bp.route('/admin/coupon/delete/<int:id>', methods=['POST'])
 @admin_required
 def delete_coupon(id):
-    coupon = Coupon.query.get(id)
+    coupon = db.session.get(Coupon, id)
     if coupon:
         db.session.delete(coupon)
         db.session.commit()

@@ -35,8 +35,12 @@
                                 <div class="subcat-pills">
                                     {% for sub in cat.subcategories %}
                                     <div class="subcat-pill">
-                                        {{ sub.name }}
+                                        {% if sub.img %}
+                                        <img src="{{ sub.img }}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; margin-right: 5px;">
+                                        {% endif %}
+                                        <a href="{{ url_for('admin.edit_subcategory', id=sub.id) }}" style="text-decoration:none; color:inherit;">{{ sub.name }}</a>
                                         <form action="{{ url_for('admin.delete_subcategory', id=sub.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete subcategory?');">
+                                            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
                                             <button type="submit" class="btn-sub-del">&times;</button>
                                         </form>
                                     </div>
@@ -50,8 +54,9 @@
                     <td><span class="status-badge success">Active</span></td>
                     <td>
                         <div class="action-btns">
-                            <button class="btn-icon" title="Edit"><i class="fas fa-edit"></i></button>
+                            <a href="{{ url_for('admin.edit_category', id=cat.id) }}" class="btn-icon" title="Edit"><i class="fas fa-edit"></i></a>
                             <form action="{{ url_for('admin.delete_category', id=cat.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this category? All associated products will lose their category link.');">
+                                <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
                                 <button type="submit" class="btn-icon delete" title="Delete"><i class="fas fa-trash"></i></button>
                             </form>
                         </div>

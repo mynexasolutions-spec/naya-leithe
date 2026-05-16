@@ -57,37 +57,30 @@
         </div>
     </div>
     <div class="hero-cards">
-        <a href="{{ url_for('public.shop', category='Ethnic Wear', subcategory='Sarees') }}" class="hero-card"
-            style="background-image: url('https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=500&q=80')">
-            <div class="hero-card-label">Sarees</div>
+        {% for cat in categories %}
+        <a href="{{ url_for('public.shop', category=cat.name) }}" class="hero-card"
+            style="background-image: url('{{ cat.img or 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=80' }}')">
+            <div class="hero-card-label">{{ cat.name }}</div>
         </a>
-        <a href="{{ url_for('public.shop', category='Western Wear') }}" class="hero-card"
-            style="background-image: url('https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=500&q=80')">
-            <div class="hero-card-label">Western</div>
-        </a>
-        <a href="{{ url_for('public.shop', category='Accessories', subcategory='Jewellery') }}" class="hero-card"
-            style="background-image: url('https://images.unsplash.com/photo-1617019114583-affb34d1b3cd?w=500&q=80')">
-            <div class="hero-card-label">Jewellery</div>
-        </a>
-        <a href="{{ url_for('public.shop', category='Accessories', subcategory='Bags & Purses') }}" class="hero-card"
-            style="background-image: url('https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&q=80')">
-            <div class="hero-card-label">Bags</div>
-        </a>
+        {% endfor %}
     </div>
 </section>
 
 <!-- Categories Section -->
 <section class="categories-section" id="categories">
-    {{ section_header("Top Categories", on_scroll="categories-track") }}
+    {{ section_header("Our Collections", on_scroll="categories-track", view_all="/shop") }}
     <div class="categories-scroll-wrapper">
         <div class="categories-track fade-in" id="categories-track">
             {% for cat in categories %}
-            <div class="cat-card" style="background-image: url('{{ cat.img }}')">
-                <div class="cat-card-overlay">
-                    <div class="cat-card-name">{{ cat.name }}</div>
-                    <div class="cat-pill">{{ cat.count }}+ COLLECTIONS</div>
-                </div>
-            </div>
+                {% for sub in cat.subcategories %}
+                <a href="{{ url_for('public.shop', category=cat.name, subcategory=sub.name) }}" class="cat-card"
+                    style="background-image: url('{{ sub.img or cat.img or 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=80' }}'); text-decoration: none;">
+                    <div class="cat-card-overlay">
+                        <div class="cat-card-name">{{ sub.name }}</div>
+                        <div class="cat-pill">{{ cat.name }}</div>
+                    </div>
+                </a>
+                {% endfor %}
             {% endfor %}
         </div>
     </div>
@@ -131,20 +124,22 @@
     </div>
 </div>
 
-<!-- Featured Products Grid -->
-<section class="featured-section" id="featured">
-    {{ section_header("Featured Products", view_all="#") }}
-    <div class="products-grid fade-in">
-        {% for prod in featured_products %}
-        {{ product_card(prod) }}
-        {% endfor %}
+<!-- Featured Products Carousel -->
+<section class="featured-section" id="featured" style="background: var(--warm-white)">
+    {{ section_header("Featured Products", on_scroll="featured-track", view_all="#") }}
+    <div class="scroll-carousel fade-in">
+        <div class="carousel-track na-carousel-track" id="featured-track">
+            {% for prod in featured_products %}
+            {{ product_card(prod) }}
+            {% endfor %}
+        </div>
     </div>
 </section>
 
 <!-- Dynamic Category Sections -->
 {% for section in category_sections %}
 <section id="{{ section.id }}" style="background: {{ 'var(--warm-white)' if loop.index is even else 'var(--cream)' }}">
-    {{ section_header(section.name, on_scroll=section.id + '-track') }}
+    {{ section_header(section.name, on_scroll=section.id + '-track', view_all=url_for('public.shop', category=section.name)) }}
     <div class="scroll-carousel fade-in">
         <div class="carousel-track na-carousel-track" id="{{ section.id }}-track">
             {% for prod in section.products %}
@@ -187,59 +182,79 @@
 <!-- Testimonials -->
 <section class="testimonials-section">
     {{ section_header("What Our Customers Say", on_scroll="testimonials-grid") }}
-    <div class="testimonials-grid fade-in" id="testimonials-grid">
-        {% if featured_reviews %}
-        {% for review in featured_reviews %}
-        <div class="testimonial-card">
-            <div class="testimonial-stars">
-                {% for i in range(review.rating) %}★{% endfor %}
-                {% for i in range(5 - review.rating) %}☆{% endfor %}
-            </div>
-            <div class="testimonial-text">"{{ review.comment }}"</div>
-            <div class="testimonial-author">
-                <div class="profile-circle"
-                    style="width: 40px; height: 40px; font-size: 14px; margin-right: 12px; background: var(--crimson); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">
-                    {{ (review.customer_name[0] if review.customer_name else (review.user_rel.email[0] if
-                    review.user_rel else 'A')).upper() }}
+    <div class="scroll-carousel fade-in">
+        <div class="testimonials-grid" id="testimonials-grid">
+            {% if featured_reviews %}
+            {% for review in featured_reviews %}
+            <div class="testimonial-card">
+                <div class="testimonial-stars">
+                    {% for i in range(review.rating) %}★{% endfor %}
+                    {% for i in range(5 - review.rating) %}☆{% endfor %}
                 </div>
-                <div>
-                    <div class="testimonial-name">{{ review.customer_name or (review.user_rel.username if
-                        review.user_rel else 'Anonymous') }}</div>
-                    <div class="testimonial-loc">{{ review.customer_location or (review.user_rel.city if review.user_rel
-                        else 'India') }}</div>
+                <div class="testimonial-text">"{{ review.comment }}"</div>
+                <div class="testimonial-author">
+                    <div class="profile-circle"
+                        style="width: 40px; height: 40px; font-size: 14px; margin-right: 12px; background: var(--crimson); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">
+                        {{ (review.customer_name[0] if review.customer_name else (review.user_rel.email[0] if
+                        review.user_rel else 'A')).upper() }}
+                    </div>
+                    <div>
+                        <div class="testimonial-name">{{ review.customer_name or (review.user_rel.username if
+                            review.user_rel else 'Anonymous') }}</div>
+                        <div class="testimonial-loc">{{ review.customer_location or (review.user_rel.city if review.user_rel
+                            else 'India') }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+            
+            <!-- Static Reviews -->
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <div class="testimonial-text">"Absolutely loved my silk saree from Naye Leithe! The quality is outstanding and the colours are exactly as shown. Will definitely order again."</div>
+                <div class="testimonial-author">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
+                    <div>
+                        <div class="testimonial-name">Priya Sharma</div>
+                        <div class="testimonial-loc">Mumbai, India</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <div class="testimonial-text">"The cord set I ordered was so elegant and the stitching is perfect. Got so many compliments at the party! Fast delivery too."</div>
+                <div class="testimonial-author">
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
+                    <div>
+                        <div class="testimonial-name">Riya Mehta</div>
+                        <div class="testimonial-loc">Delhi, India</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <div class="testimonial-text">"Bought a designer lehenga for my sister's wedding. The handloom work is exquisite. Truly premium quality at reasonable prices."</div>
+                <div class="testimonial-author">
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
+                    <div>
+                        <div class="testimonial-name">Ananya Iyer</div>
+                        <div class="testimonial-loc">Bangalore, India</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">★★★★★</div>
+                <div class="testimonial-text">"The jewellery collection is so unique. I ordered a kundan set and it looks way more expensive than it actually was. Love it!"</div>
+                <div class="testimonial-author">
+                    <img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=100&h=100&q=80&fit=crop" class="testimonial-avatar" alt="avatar">
+                    <div>
+                        <div class="testimonial-name">Megha Das</div>
+                        <div class="testimonial-loc">Kolkata, India</div>
+                    </div>
                 </div>
             </div>
         </div>
-        {% endfor %}
-        {% else %}
-        <!-- Static fallback reviews -->
-        <div class="testimonial-card">
-            <div class="testimonial-stars">★★★★★</div>
-            <div class="testimonial-text">"Absolutely loved my silk saree from Naye Leithe! The quality is outstanding
-                and the colours are exactly as shown. Will definitely order again."</div>
-            <div class="testimonial-author">
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&q=80&fit=crop"
-                    class="testimonial-avatar" alt="avatar">
-                <div>
-                    <div class="testimonial-name">Priya Sharma</div>
-                    <div class="testimonial-loc">Mumbai, India</div>
-                </div>
-            </div>
-        </div>
-        <div class="testimonial-card">
-            <div class="testimonial-stars">★★★★★</div>
-            <div class="testimonial-text">"The cord set I ordered was so elegant and the stitching is perfect. Got so
-                many compliments at the party! Fast delivery too."</div>
-            <div class="testimonial-author">
-                <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&q=80&fit=crop"
-                    class="testimonial-avatar" alt="avatar">
-                <div>
-                    <div class="testimonial-name">Riya Mehta</div>
-                    <div class="testimonial-loc">Delhi, India</div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
     </div>
 </section>
 
@@ -396,7 +411,7 @@
         }
 
         setupAutoSlide('.carousel-track', 5000);
-        setupAutoSlide('.testimonials-grid', isMobile ? 2000 : 6000);
+        setupAutoSlide('.testimonials-grid', isMobile ? 8000 : 6000);
         setupAutoSlide('.promo-banners', isMobile ? 2500 : 5500);
     });
 </script>
