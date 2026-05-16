@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
-from extensions import oauth
+from extensions import oauth, cache
 
 
 load_dotenv()
@@ -18,6 +18,9 @@ from routes.checkout import checkout_bp
 from routes.admin import admin_bp
 
 app = Flask(__name__)
+app.config['CACHE_TYPE'] = 'SimpleCache'
+app.config['CACHE_DEFAULT_TIMEOUT'] = 300
+cache.init_app(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-for-naye-leithe')
 app.jinja_env.add_extension('jinja2.ext.do')
 

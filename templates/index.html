@@ -45,7 +45,7 @@
 <!-- Hero Section -->
 <section class="hero">
     <div class="hero-bg">
-        <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&q=80" alt="Hero Background">
+        <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=75" alt="Hero Background" fetchpriority="high">
     </div>
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -59,7 +59,7 @@
     <div class="hero-cards">
         {% for cat in categories %}
         <a href="{{ url_for('public.shop', category=cat.name) }}" class="hero-card"
-            style="background-image: url('{{ cat.img or 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=80' }}')">
+            style="background-image: url('{{ cat.img or 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=70' }}')">
             <div class="hero-card-label">{{ cat.name }}</div>
         </a>
         {% endfor %}
@@ -74,7 +74,7 @@
             {% for cat in categories %}
                 {% for sub in cat.subcategories %}
                 <a href="{{ url_for('public.shop', category=cat.name, subcategory=sub.name) }}" class="cat-card"
-                    style="background-image: url('{{ sub.img or cat.img or 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=500&q=80' }}'); text-decoration: none;">
+                    style="background-image: url('{{ sub.img or cat.img or 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=70' }}'); text-decoration: none;">
                     <div class="cat-card-overlay">
                         <div class="cat-card-name">{{ sub.name }}</div>
                         <div class="cat-pill">{{ cat.name }}</div>
@@ -292,8 +292,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-
-
         // Seamless Infinite Scroll function (Marquee)
         function setupContinuousScroll(selector, speed = 1) {
             const track = document.querySelector(selector);
@@ -302,15 +300,13 @@
             if (track.dataset.cloned) return;
             track.dataset.cloned = "true";
 
-            const container = track.parentElement;
             const originalItems = Array.from(track.children);
-
-            for (let i = 0; i < 3; i++) {
-                originalItems.forEach(item => {
-                    const clone = item.cloneNode(true);
-                    track.appendChild(clone);
-                });
-            }
+            
+            // Reduced cloning from 3x to 1x to save memory
+            originalItems.forEach(item => {
+                const clone = item.cloneNode(true);
+                track.appendChild(clone);
+            });
 
             const state = {
                 scrollPos: 0,
@@ -334,35 +330,10 @@
             function step() {
                 if (!state.isPaused) {
                     state.scrollPos += speed;
-                    const totalWidth = track.scrollWidth;
-                    const itemWidth = totalWidth / track.children.length;
-                    const originalWidth = originalItems.length * itemWidth;
+                    const originalWidth = track.scrollWidth / 2;
 
                     if (state.scrollPos >= originalWidth) {
                         state.scrollPos -= originalWidth;
-                    }
-
-                    // Center pop effect for hero-cards
-                    if (selector === '.hero-cards') {
-                        const containerRect = container.getBoundingClientRect();
-                        const centerX = containerRect.left + containerRect.width / 2;
-
-                        Array.from(track.children).forEach(card => {
-                            const cardRect = card.getBoundingClientRect();
-                            const cardCenterX = cardRect.left + cardRect.width / 2;
-                            const dist = Math.abs(centerX - cardCenterX);
-
-                            if (dist < 100) {
-                                const scale = 1 + (1 - dist / 100) * 0.15;
-                                card.style.transform = `scale(${scale})`;
-                                card.style.zIndex = "10";
-                                card.style.borderColor = "var(--crimson)";
-                            } else {
-                                card.style.transform = `scale(1)`;
-                                card.style.zIndex = "1";
-                                card.style.borderColor = "#fff";
-                            }
-                        });
                     }
 
                     track.scrollLeft = state.scrollPos;
@@ -381,13 +352,12 @@
         }
 
         if (isMobile) {
-            // Wait a bit for images/layout to settle
             setTimeout(() => {
-                setupContinuousScroll('.hero-cards', 1.5);
+                setupContinuousScroll('.hero-cards', 1.2);
             }, 500);
         }
 
-        // Auto-sliding for other tracks (New Arrivals, Testimonials, Banners)
+        // Auto-sliding for other tracks (New Arrivals, Testimonials)
         function setupAutoSlide(selector, interval = 4000) {
             const track = document.querySelector(selector);
             if (!track || selector === '.hero-cards' || selector === '.categories-track') return;
@@ -402,7 +372,7 @@
 
                 let newScroll = track.scrollLeft + scrollStep;
 
-                if (newScroll >= maxScroll + 10) {
+                if (newScroll >= maxScroll + 5) {
                     track.scrollTo({ left: 0, behavior: 'smooth' });
                 } else {
                     track.scrollTo({ left: newScroll, behavior: 'smooth' });
@@ -412,7 +382,6 @@
 
         setupAutoSlide('.carousel-track', 5000);
         setupAutoSlide('.testimonials-grid', isMobile ? 8000 : 6000);
-        setupAutoSlide('.promo-banners', isMobile ? 2500 : 5500);
     });
 </script>
 {% endblock %}

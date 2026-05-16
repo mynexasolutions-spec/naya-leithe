@@ -9,6 +9,7 @@ def slugify(text):
     text = re.sub(r'[\s_-]+', '-', text)
     return text.strip('-')
 from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand, Review, Coupon
+from extensions import cache
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
@@ -222,6 +223,7 @@ def new_product():
                         )
                         db.session.add(option)
 
+        cache.clear()
         db.session.commit()
         flash('Product added successfully!', 'success')
         return redirect(url_for('admin.products'))
@@ -341,6 +343,7 @@ def edit_product(id):
                         )
                         db.session.add(option)
 
+        cache.clear()
         db.session.commit()
         flash('Product updated successfully!', 'success')
         return redirect(url_for('admin.products'))
@@ -364,6 +367,7 @@ def delete_product(id):
         delete_image(product.img)
         delete_image(product.size_chart)
         db.session.delete(product)
+        cache.clear()
         db.session.commit()
         flash('Product deleted!', 'success')
     return redirect(url_for('admin.products'))
@@ -386,6 +390,7 @@ def new_category():
         
         category = Category(name=name, img=img)
         db.session.add(category)
+        cache.clear()
         db.session.commit()
         flash('Category added successfully!', 'success')
         return redirect(url_for('admin.categories'))
@@ -404,6 +409,7 @@ def edit_category(id):
             if cat.img:
                 delete_image(cat.img)
             cat.img = save_image(img_file, 'categories')
+        cache.clear()
         db.session.commit()
         flash('Category updated successfully!', 'success')
         return redirect(url_for('admin.categories'))
@@ -420,6 +426,7 @@ def delete_category(id):
     if category:
         delete_image(category.img)
         db.session.delete(category)
+        cache.clear()
         db.session.commit()
         flash('Category deleted!', 'success')
     return redirect(url_for('admin.categories'))
@@ -453,6 +460,7 @@ def delete_subcategory(id):
         if subcategory.img:
             delete_image(subcategory.img)
         db.session.delete(subcategory)
+        cache.clear()
         db.session.commit()
         flash('SubCategory deleted!', 'success')
         return redirect(url_for('admin.categories'))
@@ -570,6 +578,7 @@ def settings():
                     new_config = AppConfig(key=b_key, value='false')
                     db.session.add(new_config)
 
+        cache.clear()
         db.session.commit()
         flash('Settings updated successfully!', 'success')
         return redirect(url_for('admin.settings'))

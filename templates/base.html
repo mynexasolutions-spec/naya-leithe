@@ -5,11 +5,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Naye Leithe – Discover Your Signature Style{% endblock %}</title>
+    
+    <!-- Preconnect for fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Great+Vibes&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        rel="stylesheet" media="print" onload="this.media='all'">
+    
+    <!-- Defer non-critical assets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
@@ -113,14 +120,14 @@
                     <div class="footer-social">
                         <a class="social-btn" href="#"><img
                                 src="https://api.iconify.design/lucide:instagram.svg?color=%23ffffff"
-                                alt="instagram"></a>
+                                alt="instagram" loading="lazy"></a>
                         <a class="social-btn" href="#"><img
-                                src="https://api.iconify.design/lucide:facebook.svg?color=%23ffffff" alt="facebook"></a>
+                                src="https://api.iconify.design/lucide:facebook.svg?color=%23ffffff" alt="facebook" loading="lazy"></a>
                         <a class="social-btn" href="#"><img
                                 src="https://api.iconify.design/fa6-brands:pinterest-p.svg?color=%23ffffff"
-                                alt="pinterest"></a>
+                                alt="pinterest" loading="lazy"></a>
                         <a class="social-btn" href="#"><img
-                                src="https://api.iconify.design/lucide:youtube.svg?color=%23ffffff" alt="youtube"></a>
+                                src="https://api.iconify.design/lucide:youtube.svg?color=%23ffffff" alt="youtube" loading="lazy"></a>
                     </div>
                 </div>
                 <div class="footer-col">

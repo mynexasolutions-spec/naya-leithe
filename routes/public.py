@@ -1,41 +1,38 @@
 from flask import Blueprint, render_template, request, abort, session, jsonify
 from models import db, Category, Product, SubCategory, Review, User
 from routes.admin import slugify
+from extensions import cache
 
 public_bp = Blueprint('public', __name__)
 
 @public_bp.route('/')
+@cache.cached(timeout=600) # Cache for 10 minutes
 def home():
     categories = Category.query.all()
-    all_products = Product.query.all()
     
-    # Expand products for display (showing each color variation)
-    expanded_products = []
-    for p in all_products:
-        if p.product_type == 'variable' and p.variations:
-            # Group by color
-            color_variations = {}
-            for v in p.variations:
-                color_opt = next((opt for opt in v.options if 'color' in opt.attribute_value.attribute.name.lower()), None)
-                color_id = color_opt.attribute_value_id if color_opt else 'none'
-                if color_id not in color_variations:
-                    color_variations[color_id] = v
-            
-            for color_id, var in color_variations.items():
-                expanded_products.append({'product': p, 'variation': var})
-        else:
-            expanded_products.append({'product': p, 'variation': None})
-
-    new_arrivals = [p for p in expanded_products if p['product'].badge == 'New'][:8]
-    featured_products = [p for p in expanded_products if p['product'].is_featured][:8]
+    # Get New Arrivals directly from DB (Limit to 12 to account for variations)
+    new_products = Product.query.filter_by(badge='New').order_by(Product.id.desc()).limit(12).all()
+    new_arrivals = []
+    for p in new_products:
+        new_arrivals.append({'product': p, 'variation': None}) # Simple for now, or fetch first var
+        
+    # Get Featured products directly from DB
+    featured_raw = Product.query.filter_by(is_featured=True).limit(12).all()
+    featured_products = []
+    for p in featured_raw:
+        featured_products.append({'product': p, 'variation': None})
     
+    # Get Category Sections (Fetch only needed products)
     category_sections = []
     for cat in categories:
-        prods = [p for p in expanded_products if p['product'].cat_name == cat.name][:8]
-        if prods:
+        prods_raw = Product.query.filter_by(cat_name=cat.name).limit(8).all()
+        if prods_raw:
+            section_prods = []
+            for p in prods_raw:
+                section_prods.append({'product': p, 'variation': None})
             category_sections.append({
                 'name': cat.name,
-                'products': prods,
+                'products': section_prods,
                 'id': slugify(cat.name)
             })
     
