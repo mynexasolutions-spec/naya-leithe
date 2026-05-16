@@ -590,6 +590,10 @@ nav {
     gap: 12px;
 }
 
+.mobile-menu-header {
+    display: none;
+}
+
 .logo-img {
     height: 60px;
     width: auto;
