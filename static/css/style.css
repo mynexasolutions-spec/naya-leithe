@@ -248,7 +248,7 @@ section {
 
 .carousel-track, .na-carousel-track {
     display: flex;
-    justify-content: flex-start !important;
+    justify-content: center !important;
     gap: 24px;
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -2357,6 +2357,35 @@ nav {
         height: 44px;
     }
 
+    .mobile-menu-header {
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--sand);
+    }
+
+    .close-menu {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+    }
+
+    .close-menu:hover {
+        transform: scale(1.1);
+    }
+
+    .close-menu img {
+        width: 20px;
+        height: 20px;
+    }
+
     .nav-links {
         display: flex;
         flex-direction: column;
@@ -2378,6 +2407,10 @@ nav {
         transform: translateY(0);
         opacity: 1;
         pointer-events: auto;
+    }
+
+    .nav-links.mobile-active .mobile-menu-header {
+        display: flex;
     }
 
     .nav-links .dropdown-menu {
@@ -2636,6 +2669,7 @@ nav {
 
     .na-carousel-track {
         display: flex !important;
+        justify-content: center;
         flex-direction: row;
         flex-wrap: nowrap;
         gap: 12px;

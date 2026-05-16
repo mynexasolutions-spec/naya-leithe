@@ -32,6 +32,12 @@
                     <div class="nav-logo">Naye Leithe</div>
                 </a>
                 <div class="nav-links" id="navLinks">
+                    <div class="mobile-menu-header">
+                        <div class="nav-logo">Naye Leithe</div>
+                        <button class="close-menu" id="closeMenu">
+                            <img src="https://api.iconify.design/lucide:x.svg?color=%238b1a2a" alt="close">
+                        </button>
+                    </div>
                     <a href="{{ url_for('public.home') }}"
                         class="{% if request.endpoint == 'public.home' %}active{% endif %}">Home</a>
                     <div class="dropdown">
@@ -326,17 +332,24 @@
 
         const menuToggle = document.getElementById('menuToggle');
         const navLinks = document.getElementById('navLinks');
+        const closeMenu = document.getElementById('closeMenu');
         const menuIcon = document.getElementById('menuIcon');
-
+        
+        function toggleMenu() {
+            navLinks.classList.toggle('mobile-active');
+            if (navLinks.classList.contains('mobile-active')) {
+                menuIcon.src = "https://api.iconify.design/lucide:x.svg?color=%238b1a2a";
+            } else {
+                menuIcon.src = "https://api.iconify.design/lucide:menu.svg?color=%238b1a2a";
+            }
+        }
+        
         if (menuToggle) {
-            menuToggle.addEventListener('click', () => {
-                navLinks.classList.toggle('mobile-active');
-                if (navLinks.classList.contains('mobile-active')) {
-                    menuIcon.src = "https://api.iconify.design/lucide:x.svg?color=%238b1a2a";
-                } else {
-                    menuIcon.src = "https://api.iconify.design/lucide:menu.svg?color=%238b1a2a";
-                }
-            });
+            menuToggle.addEventListener('click', toggleMenu);
+        }
+        
+        if (closeMenu) {
+            closeMenu.addEventListener('click', toggleMenu);
         }
 
         function toggleWishlist(e, productId, isLarge = false) {

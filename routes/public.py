@@ -139,7 +139,12 @@ def add_review(product_id):
         'success': True, 
         'message': 'Your review has been submitted and is awaiting approval.'
     })
-    
+@public_bp.route('/wishlist')
+def wishlist():
+    wishlist_ids = session.get('wishlist', [])
+    products = Product.query.filter(Product.id.in_(wishlist_ids)).all()
+    return render_template('wishlist.html', products=products)
+
 @public_bp.route('/blogs')
 def blogs():
     return render_template('blog.html')
@@ -147,12 +152,6 @@ def blogs():
 @public_bp.route('/about')
 def about():
     return render_template('about.html')
-
-@public_bp.route('/wishlist')
-def wishlist():
-    wishlist_ids = session.get('wishlist', [])
-    products = Product.query.filter(Product.id.in_(wishlist_ids)).all()
-    return render_template('wishlist.html', products=products)
 
 @public_bp.route('/privacy-policy')
 def privacy():
