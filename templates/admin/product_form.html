@@ -94,6 +94,15 @@
                 </label>
                 <p class="form-hint">Highlight this product in the 'Featured Products' section.</p>
             </div>
+            <div class="form-group new-arrival-toggle">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="is_new_arrival" value="on" {{ 'checked' if product and product.is_new_arrival
+                        }}>
+                    <span class="checkmark"></span>
+                    Mark as New Arrival
+                </label>
+                <p class="form-hint">Highlight this product in the 'New Arrivals' section.</p>
+            </div>
 
             <!-- ATTRIBUTE SELECTION -->
             <div id="attributeSelectionSection" class="form-group full-width"

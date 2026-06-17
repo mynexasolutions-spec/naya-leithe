@@ -84,6 +84,12 @@
             {# Dynamic Attributes #}
             {% for p_attr in product.attributes %}
             <div class="variant-sect">
+                <div class="variant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text);">{{ p_attr.attribute.name }}</h4>
+                    {% if 'size' in p_attr.attribute.name.lower() %}
+                    <a href="#" class="size-chart-link" style="color: var(--crimson); text-decoration: none; font-size: 0.85rem; font-weight: 600;"><i class="fas fa-ruler-combined"></i> Size Guide</a>
+                    {% endif %}
+                </div>
                 <div class="selector-group {{ 'color-options' if 'color' in p_attr.attribute.name.lower() else '' }}" id="attr-{{ p_attr.attribute.id }}">
                     <select class="attr-select" data-attr-id="{{ p_attr.attribute.id }}" onchange="handleAttrSelect(this)">
                         <option value="" disabled {% if not selected_variation %}selected{% endif %}>Select {{ p_attr.attribute.name }}</option>
@@ -699,6 +705,64 @@
         }
     }
 </style>
+
+    <!-- Size Chart Modal -->
+    <div id="sizeChartModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; border-radius: 20px; overflow: hidden; padding: 30px; background: #fff; position: relative;">
+            <span class="close-modal" style="position: absolute; right: 20px; top: 15px; font-size: 28px; font-weight: bold; cursor: pointer; color: var(--muted);">&times;</span>
+            <h3 style="font-family: 'Playfair Display', serif; font-size: 24px; margin-bottom: 24px; color: var(--text); border-bottom: 2px solid var(--cream); padding-bottom: 12px; text-align: left;">Size Guide</h3>
+            {% if product.size_chart %}
+                <img src="{{ product.size_chart }}" alt="Size Chart" style="width: 100%; height: auto; object-fit: contain; max-height: 70vh;">
+            {% else %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: var(--cream); border-bottom: 2px solid var(--sand);">
+                                <th style="padding: 12px; font-weight: 700; color: var(--text);">Size</th>
+                                <th style="padding: 12px; font-weight: 700; color: var(--text);">Bust (in)</th>
+                                <th style="padding: 12px; font-weight: 700; color: var(--text);">Waist (in)</th>
+                                <th style="padding: 12px; font-weight: 700; color: var(--text);">Hips (in)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid var(--sand);">
+                                <td style="padding: 12px; font-weight: 600;">S</td>
+                                <td style="padding: 12px;">34 - 35</td>
+                                <td style="padding: 12px;">26 - 27</td>
+                                <td style="padding: 12px;">36 - 37</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--sand);">
+                                <td style="padding: 12px; font-weight: 600;">M</td>
+                                <td style="padding: 12px;">36 - 37</td>
+                                <td style="padding: 12px;">28 - 29</td>
+                                <td style="padding: 12px;">38 - 39</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--sand);">
+                                <td style="padding: 12px; font-weight: 600;">L</td>
+                                <td style="padding: 12px;">38 - 39</td>
+                                <td style="padding: 12px;">30 - 31</td>
+                                <td style="padding: 12px;">40 - 41</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--sand);">
+                                <td style="padding: 12px; font-weight: 600;">XL</td>
+                                <td style="padding: 12px;">40 - 42</td>
+                                <td style="padding: 12px;">32 - 34</td>
+                                <td style="padding: 12px;">42 - 44</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--sand);">
+                                <td style="padding: 12px; font-weight: 600;">XXL</td>
+                                <td style="padding: 12px;">44 - 46</td>
+                                <td style="padding: 12px;">35 - 37</td>
+                                <td style="padding: 12px;">46 - 48</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}

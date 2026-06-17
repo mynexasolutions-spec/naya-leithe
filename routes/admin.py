@@ -8,7 +8,7 @@ def slugify(text):
     text = re.sub(r'[^\w\s-]', '', text)
     text = re.sub(r'[\s_-]+', '-', text)
     return text.strip('-')
-from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand, Review, Coupon
+from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand, Review, Coupon, ProductImage
 from extensions import cache
 from datetime import datetime
 import os
@@ -16,6 +16,8 @@ from werkzeug.utils import secure_filename
 from flask import current_app
 import cloudinary.uploader
 import re
+import io
+from PIL import Image
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -33,9 +35,37 @@ def admin_required(f):
 def save_image(file, folder):
     if not file:
         return None
-    # Upload to Cloudinary
-    # folder in Cloudinary will be 'naye-leithe/{folder}'
-    upload_result = cloudinary.uploader.upload(file, folder=f"naye-leithe/{folder}")
+    # Compress image to optimize size and avoid Cloudinary size errors
+    try:
+        img = Image.open(file)
+        # Convert RGBA to RGB for JPEG formatting
+        if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            if img.mode in ('RGBA', 'LA'):
+                background.paste(img, mask=img.split()[3])
+            else:
+                background.paste(img)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+            
+        # Scale down if extremely large
+        max_size = 1600
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            
+        # Compress in-memory to JPEG
+        img_io = io.BytesIO()
+        img.save(img_io, format='JPEG', quality=75, optimize=True)
+        img_io.seek(0)
+        
+        # Upload compressed bytes to Cloudinary
+        upload_result = cloudinary.uploader.upload(img_io, folder=f"naye-leithe/{folder}")
+    except Exception as e:
+        print(f"PIL Image compression failed, uploading original file: {e}")
+        file.seek(0)
+        upload_result = cloudinary.uploader.upload(file, folder=f"naye-leithe/{folder}")
+        
     return upload_result.get('secure_url')
 
 def delete_image(image_url):
@@ -117,6 +147,7 @@ def new_product():
         sub_category_id = request.form.get('sub_category_id') or None
         brand_id = request.form.get('brand_id') or None
         is_featured = True if request.form.get('is_featured') == 'on' else False
+        is_new_arrival = True if request.form.get('is_new_arrival') == 'on' else False
         
         category = db.session.get(Category, category_id)
         cat_name = category.name if category else 'Uncategorized'
@@ -155,7 +186,8 @@ def new_product():
                 short_desc=short_desc,
                 product_type=product_type,
                 stock_status=stock_status,
-                is_featured=is_featured
+                is_featured=is_featured,
+                is_new_arrival=is_new_arrival
             )
             db.session.add(product)
             db.session.flush() # Flush to get product object ready for relations
@@ -261,6 +293,7 @@ def edit_product(id):
         product.sub_category_id = request.form.get('sub_category_id') or None
         product.brand_id = request.form.get('brand_id') or None
         product.is_featured = True if request.form.get('is_featured') == 'on' else False
+        product.is_new_arrival = True if request.form.get('is_new_arrival') == 'on' else False
         
         category = db.session.get(Category, category_id)
         if category:
@@ -532,6 +565,8 @@ def update_order_status(id):
         new_status = request.form.get('status')
         if new_status:
             order.status = new_status
+            if new_status == 'Delivered':
+                order.payment_status = 'Paid'
             db.session.commit()
             flash(f'Order #{order.order_number} status updated to {new_status}!', 'success')
     return redirect(request.referrer or url_for('admin.orders'))

@@ -126,9 +126,48 @@
                     {% endif %}
                 </div>
                 
-                <div class="summary-total" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #f1f5f9; font-weight: 800; font-size: 1.25rem;">
+                <!-- Coupon Section -->
+                <div class="coupon-section" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #f1f5f9;">
+                    <h4 style="margin-bottom: 0.8rem; font-size: 0.95rem; color: #1a1a1a; font-weight: 600;">Have a Promo Code?</h4>
+                    <div class="coupon-input-wrap" style="display: flex; gap: 8px;">
+                        <input type="text" id="couponCode" placeholder="Enter Coupon Code" style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; text-transform: uppercase;" value="{{ applied_coupon.code if applied_coupon else '' }}" {% if applied_coupon %}disabled{% endif %}>
+                        <button type="button" id="applyCouponBtn" style="background: var(--crimson); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;" onclick="toggleCoupon()">
+                            {{ 'Remove' if applied_coupon else 'Apply' }}
+                        </button>
+                    </div>
+                    <div id="couponMessage" style="font-size: 0.85rem; margin-top: 8px; font-weight: 600;"></div>
+                    
+                    {% if active_coupons %}
+                    <div class="available-coupons" style="margin-top: 1rem;">
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; display: block; margin-bottom: 5px;">Available Coupons (Click to fill):</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            {% for coupon in active_coupons %}
+                            <div class="coupon-tag" onclick="selectCoupon('{{ coupon.code }}')" style="background: #fdf2f4; border: 1px dashed var(--crimson); color: var(--crimson); padding: 5px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.2s;" title="Min order: ₹{{ coupon.threshold }} - Get {{ coupon.discount }}{{ '%' if coupon.type == 'percentage' else ' ₹' }} off">
+                                {{ coupon.code }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="summary-subtotal" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #f1f5f9; font-size: 1rem; color: #555;">
+                    <span>Subtotal</span>
+                    <span id="subtotalVal">₹{{ '{:,.2f}'.format(total) }}</span>
+                </div>
+                <div class="summary-discount" id="discountRow" style="display: {{ 'flex' if applied_coupon else 'none' }}; justify-content: space-between; align-items: center; margin-top: 0.8rem; font-size: 1rem; color: #10b981;">
+                    <span>Discount</span>
+                    <span id="discountVal">-₹{{ '{:,.2f}'.format(discount_amount) if discount_amount else '0.00' }}</span>
+                </div>
+                
+                <div class="summary-shipping" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; font-size: 1rem; color: #555;">
+                    <span>Shipping</span>
+                    <span id="shippingVal">{% if shipping_cost > 0 %}₹{{ '{:,.2f}'.format(shipping_cost) }}{% else %}FREE{% endif %}</span>
+                </div>
+                
+                <div class="summary-total" style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #f1f5f9; font-weight: 800; font-size: 1.25rem;">
                     <span>Total Amount</span>
-                    <span class="total-val" style="color: var(--crimson);">₹{{ '{:,.2f}'.format(total) }}</span>
+                    <span class="total-val" id="finalTotalVal" style="color: var(--crimson);">₹{{ '{:,.2f}'.format(total - discount_amount + shipping_cost) }}</span>
                 </div>
 
                 <div class="payment-section" style="margin-top: 1.5rem;">
@@ -314,6 +353,92 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+let isCouponApplied = {% if applied_coupon %}true{% else %}false{% endif %};
+const originalSubtotal = {{ total }};
+
+function selectCoupon(code) {
+    if (isCouponApplied) return;
+    document.getElementById('couponCode').value = code;
+}
+
+function toggleCoupon() {
+    const btn = document.getElementById('applyCouponBtn');
+    const input = document.getElementById('couponCode');
+    const msg = document.getElementById('couponMessage');
+    const discountRow = document.getElementById('discountRow');
+    const discountVal = document.getElementById('discountVal');
+    const shippingVal = document.getElementById('shippingVal');
+    const finalTotalVal = document.getElementById('finalTotalVal');
+    
+    if (isCouponApplied) {
+        // Remove coupon
+        fetch('/remove-coupon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subtotal: originalSubtotal })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                isCouponApplied = false;
+                input.value = '';
+                input.disabled = false;
+                btn.innerText = 'Apply';
+                discountRow.style.display = 'none';
+                
+                if (data.shipping_cost > 0) {
+                    shippingVal.innerText = '₹' + data.shipping_cost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else {
+                    shippingVal.innerText = 'FREE';
+                }
+                
+                finalTotalVal.innerText = '₹' + data.new_total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                msg.style.color = '#ef4444';
+                msg.innerText = '';
+                Swal.fire('Success', 'Coupon removed successfully.', 'success');
+            }
+        });
+    } else {
+        // Apply coupon
+        const code = input.value.trim();
+        if (!code) {
+            Swal.fire('Warning', 'Please enter a coupon code.', 'warning');
+            return;
+        }
+        
+        fetch('/apply-coupon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code, subtotal: originalSubtotal })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                isCouponApplied = true;
+                input.disabled = true;
+                btn.innerText = 'Remove';
+                discountRow.style.display = 'flex';
+                discountVal.innerText = '-₹' + data.discount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                if (data.shipping_cost > 0) {
+                    shippingVal.innerText = '₹' + data.shipping_cost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else {
+                    shippingVal.innerText = 'FREE';
+                }
+                
+                finalTotalVal.innerText = '₹' + data.new_total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                msg.style.color = '#10b981';
+                msg.innerText = data.message;
+                Swal.fire('Success', data.message, 'success');
+            } else {
+                msg.style.color = '#ef4444';
+                msg.innerText = data.message;
+                Swal.fire('Error', data.message, 'error');
+            }
+        });
+    }
+}
+
 function toggleNewAddressForm(radio) {
     document.querySelectorAll('input[name="selected_address_id"]').forEach(r => {
         if(r !== radio) r.checked = false;
@@ -337,18 +462,18 @@ document.getElementById('checkoutForm').addEventListener('submit', function(e) {
     const btn = document.querySelector('.checkout-btn');
     const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
     
-    const selectedAddressRadio = form.querySelector('input[name="selected_address_id"]:checked');
-    if (!selectedAddressRadio) {
+    const selectedAddressInput = form.querySelector('input[name="selected_address_id"]:checked') || form.querySelector('input[name="selected_address_id"][type="hidden"]');
+    if (!selectedAddressInput) {
         Swal.fire('Error', 'Please select or add a shipping address', 'error');
         return;
     }
     
     const addressData = {
         payment_method: paymentMethod,
-        address_id: selectedAddressRadio.value
+        address_id: selectedAddressInput.value
     };
     
-    if (selectedAddressRadio.value === 'new') {
+    if (selectedAddressInput.value === 'new') {
         addressData.full_name = form.querySelector('input[name="full_name"]').value;
         addressData.phone = form.querySelector('input[name="phone"]').value;
         addressData.address_line_1 = form.querySelector('input[name="address_line_1"]').value;
@@ -431,9 +556,9 @@ document.getElementById('checkoutForm').addEventListener('submit', function(e) {
                     });
                 },
                 "prefill": {
-                    "name": form.querySelector('input[name="full_name"]').value,
-                    "email": "{{ user.email }}",
-                    "contact": form.querySelector('input[name="phone"]').value
+                    "name": (selectedAddressInput.value === 'new') ? (form.querySelector('input[name="full_name"]').value || "{{ user.username if user else '' }}") : "{{ user.username if user else '' }}",
+                    "email": "{{ user.email if user else '' }}",
+                    "contact": (selectedAddressInput.value === 'new') ? (form.querySelector('input[name="phone"]').value || "{{ user.phone if user else '' }}") : "{{ user.phone if user else '' }}"
                 },
                 "theme": { "color": "#8b1a2a" },
                 "modal": {

@@ -11,7 +11,7 @@ def home():
     categories = Category.query.all()
     
     # Get New Arrivals directly from DB (Limit to 12 to account for variations)
-    new_products = Product.query.filter_by(badge='New').order_by(Product.id.desc()).limit(12).all()
+    new_products = Product.query.filter_by(is_new_arrival=True).order_by(Product.id.desc()).limit(12).all()
     new_arrivals = []
     for p in new_products:
         new_arrivals.append({'product': p, 'variation': None}) # Simple for now, or fetch first var
@@ -51,6 +51,12 @@ def shop():
     selected_subcategories = request.args.getlist('subcategory')
     
     query = Product.query
+    
+    # Text Search
+    search_query = request.args.get('search', '').strip()
+    if search_query:
+        query = query.filter(Product.name.ilike(f"%{search_query}%") | Product.desc.ilike(f"%{search_query}%"))
+        
     if selected_categories:
         query = query.join(Category).filter(Category.name.in_(selected_categories))
     
@@ -60,6 +66,26 @@ def shop():
     on_sale = request.args.get('on_sale')
     if on_sale:
         query = query.filter(Product.orig != None, Product.orig != '')
+
+    # Price max filtering
+    from sqlalchemy import func, cast, Numeric
+    clean_price = func.replace(func.replace(Product.price, '₹', ''), ',', '')
+    
+    price_max = request.args.get('price_max', type=float)
+    if price_max is not None and price_max < 10000:
+        query = query.filter(cast(clean_price, Numeric) <= price_max)
+        
+    # Sorting
+    sort_by = request.args.get('sort_by', 'newest')
+    if sort_by == 'price_asc':
+        query = query.order_by(cast(clean_price, Numeric).asc())
+    elif sort_by == 'price_desc':
+        query = query.order_by(cast(clean_price, Numeric).desc())
+    elif sort_by == 'popularity':
+        from models import Review
+        query = query.outerjoin(Review).group_by(Product.id).order_by(func.count(Review.id).desc())
+    else: # newest
+        query = query.order_by(Product.id.desc())
         
     # Pagination
     page = request.args.get('page', 1, type=int)

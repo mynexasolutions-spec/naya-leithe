@@ -24,6 +24,14 @@ cache.init_app(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-for-naye-leithe')
 app.jinja_env.add_extension('jinja2.ext.do')
 
+import secrets
+
+@app.before_request
+def ensure_csrf_token():
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_hex(16)
+
+
 @app.template_filter('optimize')
 def optimize_image(url, width=500, quality='auto'):
     if not url or 'cloudinary.com' not in url:

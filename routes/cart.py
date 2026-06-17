@@ -10,6 +10,11 @@ def safe_price(price_str):
     except (ValueError, AttributeError):
         return 0
 
+def get_config(k, default=None):
+    from models import AppConfig
+    c = AppConfig.query.filter_by(key=k).first()
+    return c.value if c else default
+
 @cart_bp.route('/cart')
 def view_cart():
     from models import ProductVariation
@@ -210,11 +215,64 @@ def checkout():
     
     addresses = Address.query.filter_by(user_id=session['user_id']).order_by(Address.is_default.desc()).all()
     
+    applied_coupon = session.get('applied_coupon')
+    discount_amount = 0.0
+    if applied_coupon:
+        from models import Coupon
+        coupon = Coupon.query.filter_by(code=applied_coupon['code'], is_active=True).first()
+        if coupon:
+            if coupon.type == 'flat':
+                discount_amount = coupon.discount
+            elif coupon.type == 'percentage':
+                discount_amount = total * (coupon.discount / 100.0)
+            discount_amount = min(discount_amount, total)
+            applied_coupon['discount_amount'] = discount_amount
+            session['applied_coupon'] = applied_coupon
+            session.modified = True
+        else:
+            session.pop('applied_coupon', None)
+            applied_coupon = None
+
+    # Fetch active coupons for listing
+    from models import Coupon
+    from datetime import datetime
+    active_coupons = Coupon.query.filter(
+        Coupon.is_active == True,
+        Coupon.usage_limit > 0,
+        (Coupon.expiry_date == None) | (Coupon.expiry_date >= datetime.utcnow())
+    ).all()
+
+    # Shipping configuration
+    shipping_enabled = get_config('shipping_enabled') == 'true'
+    shipping_charges = 0.0
+    free_shipping_above = 0.0
+    if shipping_enabled:
+        try:
+            shipping_charges = float(get_config('shipping_charges', '0').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            shipping_charges = 0.0
+        try:
+            free_shipping_above = float(get_config('free_shipping_above', '999').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            free_shipping_above = 999.0
+
+    discounted_subtotal = total - discount_amount
+    shipping_cost = 0.0
+    if shipping_enabled and (discounted_subtotal < free_shipping_above):
+        shipping_cost = shipping_charges
+
     return render_template('checkout.html', user=user, total=total, cart_items=cart_items,
                            online_payment=online_payment, 
                            partial_payment=partial_payment,
                            razorpay_key_id=razorpay_key_id,
-                           addresses=addresses)
+                           addresses=addresses,
+                           applied_coupon=applied_coupon,
+                           discount_amount=discount_amount,
+                           active_coupons=active_coupons,
+                           shipping_cost=shipping_cost,
+                           shipping_enabled=shipping_enabled,
+                           shipping_charges=shipping_charges,
+                           free_shipping_above=free_shipping_above)
 
 import razorpay
 import uuid
@@ -296,10 +354,51 @@ def place_order():
             addr2_str = f"{addr.address_line_2}\n" if addr.address_line_2 else ""
             shipping_addr_str = f"{addr.full_name}\n{addr.address_line_1}\n{addr2_str}{addr.city}, {addr.state} {addr.pincode}\n{addr.country}\nPhone: {addr.phone}"
             
+    # Apply coupon if stored in session
+    applied_coupon = session.get('applied_coupon')
+    discount_amount = 0.0
+    if applied_coupon:
+        from models import Coupon
+        coupon = Coupon.query.filter_by(code=applied_coupon['code'], is_active=True).first()
+        if coupon and coupon.usage_limit > 0:
+            if coupon.type == 'flat':
+                discount_amount = coupon.discount
+            elif coupon.type == 'percentage':
+                discount_amount = total * (coupon.discount / 100.0)
+            discount_amount = min(discount_amount, total)
+            
+            # Decrement usage limit
+            coupon.usage_limit -= 1
+            if coupon.usage_limit == 0:
+                coupon.is_active = False
+            db.session.add(coupon)
+            
+    discounted_subtotal = max(0.0, total - discount_amount)
+
+    # Calculate shipping cost
+    shipping_enabled = get_config('shipping_enabled') == 'true'
+    shipping_charges = 0.0
+    free_shipping_above = 0.0
+    if shipping_enabled:
+        try:
+            shipping_charges = float(get_config('shipping_charges', '0').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            shipping_charges = 0.0
+        try:
+            free_shipping_above = float(get_config('free_shipping_above', '999').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            free_shipping_above = 999.0
+            
+    shipping_cost = 0.0
+    if shipping_enabled and (discounted_subtotal < free_shipping_above):
+        shipping_cost = shipping_charges
+        
+    final_total = discounted_subtotal + shipping_cost
+
     new_order = Order(
         order_number=order_number,
         user_id=session['user_id'],
-        total_amount=f"₹{total:,.2f}",
+        total_amount=f"₹{final_total:,.2f}",
         payment_method=payment_method,
         status='Pending Payment' if payment_method in ['Online', 'Partial'] else 'Processing',
         payment_status='Unpaid',
@@ -331,6 +430,7 @@ def place_order():
     if payment_method == 'COD':
         db.session.commit()
         session.pop('cart', None)
+        session.pop('applied_coupon', None)
         return jsonify({'success': True, 'method': 'COD', 'redirect': url_for('auth.profile')})
         
     elif payment_method in ['Online', 'Partial']:
@@ -342,11 +442,11 @@ def place_order():
             db.session.rollback()
             return jsonify({'success': False, 'message': 'Payment gateway not configured properly.'})
             
-        amount_to_pay = total
+        amount_to_pay = final_total
         if payment_method == 'Partial':
             partial_percent = AppConfig.query.filter_by(key='partial_payment_percentage').first()
             if partial_percent and partial_percent.value.isdigit():
-                amount_to_pay = total * (int(partial_percent.value) / 100.0)
+                amount_to_pay = final_total * (int(partial_percent.value) / 100.0)
                 
         # Initialize Razorpay Client
         client = razorpay.Client(auth=(key_id.value, key_secret.value))
@@ -399,14 +499,132 @@ def verify_payment():
         order = db.session.get(Order, order_id)
         if order:
             order.status = 'Processing'
+            total_clean = float(order.total_amount.replace('₹', '').replace(',', '').strip())
             if order.payment_method == 'Partial':
                 order.payment_status = 'Partially Paid'
+                partial_percent = AppConfig.query.filter_by(key='partial_payment_percentage').first()
+                if partial_percent and partial_percent.value.isdigit():
+                    order.amount_paid = total_clean * (int(partial_percent.value) / 100.0)
+                else:
+                    order.amount_paid = total_clean
             else:
                 order.payment_status = 'Paid'
+                order.amount_paid = total_clean
             order.razorpay_payment_id = razorpay_payment_id
             db.session.commit()
             session.pop('cart', None)
+            session.pop('applied_coupon', None)
             return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': 'Payment verification failed'})
+
+
+@cart_bp.route('/apply-coupon', methods=['POST'])
+def apply_coupon():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Please login to apply coupon.'}), 401
+        
+    data = request.json
+    code = data.get('code', '').strip().upper()
+    subtotal = float(data.get('subtotal', 0))
+    
+    from models import Coupon
+    from datetime import datetime
+    
+    coupon = Coupon.query.filter_by(code=code, is_active=True).first()
+    if not coupon:
+        return jsonify({'success': False, 'message': 'Invalid or inactive coupon code.'})
+        
+    if coupon.expiry_date and coupon.expiry_date < datetime.utcnow():
+        return jsonify({'success': False, 'message': 'Coupon has expired.'})
+        
+    if coupon.usage_limit <= 0:
+        return jsonify({'success': False, 'message': 'Coupon limit has been reached.'})
+        
+    if subtotal < coupon.threshold:
+        return jsonify({'success': False, 'message': f'Minimum order amount of ₹{coupon.threshold:,.2f} is required for this coupon.'})
+        
+    discount = 0.0
+    if coupon.type == 'flat':
+        discount = coupon.discount
+    elif coupon.type == 'percentage':
+        discount = subtotal * (coupon.discount / 100.0)
+        
+    discount = min(discount, subtotal)
+    
+    session['applied_coupon'] = {
+        'code': coupon.code,
+        'type': coupon.type,
+        'discount_val': coupon.discount,
+        'discount_amount': discount
+    }
+    session.modified = True
+    
+    from models import AppConfig
+    def get_config(k, default=None):
+        c = AppConfig.query.filter_by(key=k).first()
+        return c.value if c else default
+        
+    shipping_enabled = get_config('shipping_enabled') == 'true'
+    shipping_charges = 0.0
+    free_shipping_above = 0.0
+    if shipping_enabled:
+        try:
+            shipping_charges = float(get_config('shipping_charges', '0').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            shipping_charges = 0.0
+        try:
+            free_shipping_above = float(get_config('free_shipping_above', '999').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            free_shipping_above = 999.0
+            
+    discounted_subtotal = subtotal - discount
+    shipping_cost = 0.0
+    if shipping_enabled and (discounted_subtotal < free_shipping_above):
+        shipping_cost = shipping_charges
+    
+    return jsonify({
+        'success': True,
+        'message': 'Coupon applied successfully!',
+        'discount': discount,
+        'shipping_cost': shipping_cost,
+        'new_total': discounted_subtotal + shipping_cost
+    })
+
+@cart_bp.route('/remove-coupon', methods=['POST'])
+def remove_coupon():
+    session.pop('applied_coupon', None)
+    session.modified = True
+    
+    data = request.json or {}
+    subtotal = float(data.get('subtotal', 0))
+    
+    from models import AppConfig
+    def get_config(k, default=None):
+        c = AppConfig.query.filter_by(key=k).first()
+        return c.value if c else default
+        
+    shipping_enabled = get_config('shipping_enabled') == 'true'
+    shipping_charges = 0.0
+    free_shipping_above = 0.0
+    if shipping_enabled:
+        try:
+            shipping_charges = float(get_config('shipping_charges', '0').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            shipping_charges = 0.0
+        try:
+            free_shipping_above = float(get_config('free_shipping_above', '999').replace('₹', '').replace(',', '').strip())
+        except ValueError:
+            free_shipping_above = 999.0
+            
+    shipping_cost = 0.0
+    if shipping_enabled and (subtotal < free_shipping_above):
+        shipping_cost = shipping_charges
+        
+    return jsonify({
+        'success': True,
+        'message': 'Coupon removed.',
+        'shipping_cost': shipping_cost,
+        'new_total': subtotal + shipping_cost
+    })
 

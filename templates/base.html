@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Discover Naye Leithe – your premium destination for authentic ethnic wear, designer sarees, bridal lehenga choli, and contemporary western fashion. Handcrafted with love in India.">
+    <meta name="keywords" content="Naye Leithe, ethnic wear, sarees, lehenga, western wear, Indian fashion, designer clothing">
     <title>{% block title %}Naye Leithe – Discover Your Signature Style{% endblock %}</title>
     
     <!-- Preconnect for fonts -->
@@ -71,11 +73,11 @@
                         class="{% if request.endpoint == 'public.contact' %}active{% endif %}">Contact Us</a>
                 </div>
                 <div class="nav-actions">
-                    <div class="nav-search">
+                    <form action="{{ url_for('public.shop') }}" method="GET" class="nav-search">
                         <img src="https://api.iconify.design/lucide:search.svg?color=%238a7f78" class="icon-img"
                             alt="search">
-                        <input type="text" placeholder="Search Products">
-                    </div>
+                        <input type="text" name="search" placeholder="Search Products" value="{{ request.args.get('search', '') }}">
+                    </form>
 
 
                     {% if session.get('is_admin') %}
@@ -118,15 +120,15 @@
                     <p>Your destination for authentic ethnic and contemporary fashion. Every piece tells a story of
                         craftsmanship and elegance.</p>
                     <div class="footer-social">
-                        <a class="social-btn" href="#"><img
+                        <a class="social-btn" href="https://instagram.com/nayeleithe" target="_blank" rel="noopener"><img
                                 src="https://api.iconify.design/lucide:instagram.svg?color=%23ffffff"
                                 alt="instagram" loading="lazy"></a>
-                        <a class="social-btn" href="#"><img
+                        <a class="social-btn" href="https://facebook.com/nayeleithe" target="_blank" rel="noopener"><img
                                 src="https://api.iconify.design/lucide:facebook.svg?color=%23ffffff" alt="facebook" loading="lazy"></a>
-                        <a class="social-btn" href="#"><img
+                        <a class="social-btn" href="https://pinterest.com/nayeleithe" target="_blank" rel="noopener"><img
                                 src="https://api.iconify.design/fa6-brands:pinterest-p.svg?color=%23ffffff"
                                 alt="pinterest" loading="lazy"></a>
-                        <a class="social-btn" href="#"><img
+                        <a class="social-btn" href="https://youtube.com/@nayeleithe" target="_blank" rel="noopener"><img
                                 src="https://api.iconify.design/lucide:youtube.svg?color=%23ffffff" alt="youtube" loading="lazy"></a>
                     </div>
                 </div>
