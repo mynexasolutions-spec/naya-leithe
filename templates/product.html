@@ -39,7 +39,7 @@
                     <img src="{{ p_img.img_url | optimize(width=150) }}" alt="Gallery">
                 </div>
                 {% endfor %}
-                {% if product.size_chart %}
+                {% if product.size_chart and product.size_chart.lower() != 'none' and product.size_chart.strip() != '' %}
                 <div class="thumb" 
                     onclick="changeMainImg('{{ product.size_chart }}', this)" 
                     data-attr-val="none">
@@ -86,7 +86,7 @@
             <div class="variant-sect">
                 <div class="variant-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                     <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text);">{{ p_attr.attribute.name }}</h4>
-                    {% if 'size' in p_attr.attribute.name.lower() %}
+                    {% if 'size' in p_attr.attribute.name.lower() and product.size_chart and product.size_chart.lower() != 'none' and product.size_chart.strip() != '' %}
                     <a href="#" class="size-chart-link" style="color: var(--crimson); text-decoration: none; font-size: 0.85rem; font-weight: 600;"><i class="fas fa-ruler-combined"></i> Size Guide</a>
                     {% endif %}
                 </div>
@@ -640,6 +640,12 @@
         font-size: 16px;
         cursor: pointer;
         transition: all 0.3s;
+    }
+    @media (min-width: 992px) {
+        .submit-review-btn {
+            width: fit-content;
+            padding: 16px 48px;
+        }
     }
     .submit-review-btn:hover {
         background: var(--crimson-dark);

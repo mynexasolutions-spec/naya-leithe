@@ -6,7 +6,6 @@ from extensions import cache
 public_bp = Blueprint('public', __name__)
 
 @public_bp.route('/')
-@cache.cached(timeout=600) # Cache for 10 minutes
 def home():
     categories = Category.query.all()
     
