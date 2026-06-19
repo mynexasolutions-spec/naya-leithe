@@ -17,10 +17,23 @@ from routes.cart import cart_bp
 from routes.checkout import checkout_bp
 from routes.admin import admin_bp
 
-from werkzeug.middleware.proxy_fix import ProxyFix
+try:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+except ImportError:
+    try:
+        from werkzeug.contrib.fixers import ProxyFix
+    except ImportError:
+        ProxyFix = None
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+if ProxyFix:
+    try:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+    except TypeError:
+        try:
+            app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+        except Exception as e:
+            print(f"Failed to initialize ProxyFix: {e}")
 app.config['CACHE_TYPE'] = 'SimpleCache'
 app.config['CACHE_DEFAULT_TIMEOUT'] = 300
 cache.init_app(app)
@@ -93,44 +106,47 @@ app.register_blueprint(checkout_bp)
 app.register_blueprint(admin_bp)
 
 # Create admin user if it doesn't exist
-with app.app_context():
-    db.create_all()
-    
-    # Ensure upload directories exist (skip on Vercel - read-only filesystem)
-    upload_dirs = [
-        app.config['UPLOAD_FOLDER'],
-        os.path.join(app.config['UPLOAD_FOLDER'], 'products'),
-        os.path.join(app.config['UPLOAD_FOLDER'], 'categories'),
-        os.path.join(app.config['UPLOAD_FOLDER'], 'size_charts')
-    ]
-    for d in upload_dirs:
-        try:
-            if not os.path.exists(d):
-                os.makedirs(d)
-        except OSError:
-            pass  # Vercel serverless has read-only filesystem
-            
-    # Seed Admin
-    admin_email = os.getenv('ADMIN_EMAIL', 'admin@nayeleithe.com')
-    admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
-    if not User.query.filter_by(email=admin_email).first():
-        admin = User(email=admin_email, is_admin=True)
-        admin.set_password(admin_password)
-        db.session.add(admin)
-    
-    # Seed default configs
-    default_configs = {
-        'shipping_charges': '₹99',
-        'free_shipping_above': '₹999',
-        'payment_methods': 'COD, Razorpay, UPI',
-        'contact_email': 'support@nayeleithe.com'
-    }
-    for key, value in default_configs.items():
-        if not AppConfig.query.filter_by(key=key).first():
-            config = AppConfig(key=key, value=value)
-            db.session.add(config)
-            
-    db.session.commit()
+try:
+    with app.app_context():
+        db.create_all()
+        
+        # Ensure upload directories exist (skip on Vercel - read-only filesystem)
+        upload_dirs = [
+            app.config['UPLOAD_FOLDER'],
+            os.path.join(app.config['UPLOAD_FOLDER'], 'products'),
+            os.path.join(app.config['UPLOAD_FOLDER'], 'categories'),
+            os.path.join(app.config['UPLOAD_FOLDER'], 'size_charts')
+        ]
+        for d in upload_dirs:
+            try:
+                if not os.path.exists(d):
+                    os.makedirs(d)
+            except OSError:
+                pass  # Vercel serverless has read-only filesystem
+                
+        # Seed Admin
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@nayeleithe.com')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+        if not User.query.filter_by(email=admin_email).first():
+            admin = User(email=admin_email, is_admin=True)
+            admin.set_password(admin_password)
+            db.session.add(admin)
+        
+        # Seed default configs
+        default_configs = {
+            'shipping_charges': '₹99',
+            'free_shipping_above': '₹999',
+            'payment_methods': 'COD, Razorpay, UPI',
+            'contact_email': 'support@nayeleithe.com'
+        }
+        for key, value in default_configs.items():
+            if not AppConfig.query.filter_by(key=key).first():
+                config = AppConfig(key=key, value=value)
+                db.session.add(config)
+                
+        db.session.commit()
+except Exception as e:
+    print(f"Database initialization/seeding failed at startup: {e}")
 
 # Helper function to get global data
 @app.context_processor
