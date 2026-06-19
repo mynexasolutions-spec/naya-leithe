@@ -1760,9 +1760,6 @@ nav {
     background: transparent;
     border: 2px solid var(--crimson) !important;
     color: var(--crimson);
-    flex: 0 1 auto !important;
-    width: fit-content;
-    padding: 16px 40px !important;
 }
 
 .buy-now {

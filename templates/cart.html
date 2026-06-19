@@ -29,10 +29,16 @@
                         <tr>
                             <td class="product-cell" data-label="Product">
                                 <div class="cart-prod-info">
-                                    <img src="{{ item.var_img or item.product.img }}" alt="{{ item.product.name }}">
+                                    <a href="{{ url_for('public.product_detail', id=item.product.id) }}">
+                                        <img src="{{ item.var_img or item.product.img }}" alt="{{ item.product.name }}">
+                                    </a>
                                     <div>
                                          <div class="cart-prod-cat">{{ item.product.cat_name }}</div>
-                                         <div class="cart-prod-name">{{ item.product.name }}</div>
+                                         <div class="cart-prod-name">
+                                             <a href="{{ url_for('public.product_detail', id=item.product.id) }}" style="text-decoration: none; color: inherit; font-weight: inherit;">
+                                                 {{ item.product.name }}
+                                             </a>
+                                         </div>
                                          {% if item.options %}
                                          <div class="cart-prod-variants">
                                              {% for opt in item.options %}
