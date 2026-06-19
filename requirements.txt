@@ -10,4 +10,5 @@ authlib
 requests
 razorpay
 Flask-Caching
+Pillow
 
