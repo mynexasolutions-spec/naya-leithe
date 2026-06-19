@@ -17,11 +17,17 @@ from routes.cart import cart_bp
 from routes.checkout import checkout_bp
 from routes.admin import admin_bp
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 app.config['CACHE_TYPE'] = 'SimpleCache'
 app.config['CACHE_DEFAULT_TIMEOUT'] = 300
 cache.init_app(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'secret-key-for-naye-leithe')
+if not app.debug:
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.jinja_env.add_extension('jinja2.ext.do')
 
 import secrets

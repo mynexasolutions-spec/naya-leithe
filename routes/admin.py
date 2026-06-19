@@ -682,6 +682,10 @@ def admin_attribute_edit(attr_id):
 @admin_bp.route('/admin/attribute/delete/<int:attr_id>', methods=['POST'])
 @admin_required
 def admin_attribute_delete(attr_id):
+    # CSRF Token Check
+    if request.form.get('csrf_token') != session.get('csrf_token'):
+        abort(403, "CSRF validation failed – token missing")
+        
     attribute = db.session.get(Attribute, attr_id)
     if attribute:
         db.session.delete(attribute)
