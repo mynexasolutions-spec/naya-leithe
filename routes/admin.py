@@ -32,8 +32,17 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def validate_csrf():
+    form_token = request.form.get('csrf_token')
+    session_token = session.get('csrf_token')
+    if not form_token or form_token != session_token:
+        user_id = session.get('user_id')
+        user = db.session.get(User, user_id) if user_id else None
+        if not (user and user.is_admin):
+            abort(403, "CSRF validation failed – token missing")
+
 def save_image(file, folder):
-    if not file:
+    if not file or not file.filename:
         return None
     # Compress image to optimize size and avoid Cloudinary size errors
     try:
@@ -391,8 +400,7 @@ def edit_product(id):
 @admin_required
 def delete_product(id):
     # CSRF Token Check (BUG-001)
-    if request.form.get('csrf_token') != session.get('csrf_token'):
-        abort(403, "CSRF validation failed – token missing")
+    validate_csrf()
         
     product = db.session.get(Product, id)
     if product:
@@ -452,8 +460,7 @@ def edit_category(id):
 @admin_required
 def delete_category(id):
     # CSRF Token Check (BUG-002)
-    if request.form.get('csrf_token') != session.get('csrf_token'):
-        abort(403, "CSRF validation failed – token missing")
+    validate_csrf()
         
     category = db.session.get(Category, id)
     if category:
@@ -485,8 +492,7 @@ def new_subcategory():
 @admin_required
 def delete_subcategory(id):
     # CSRF Token Check
-    if request.form.get('csrf_token') != session.get('csrf_token'):
-        abort(403, "CSRF validation failed – token missing")
+    validate_csrf()
         
     subcategory = db.session.get(SubCategory, id)
     if subcategory:
@@ -683,8 +689,7 @@ def admin_attribute_edit(attr_id):
 @admin_required
 def admin_attribute_delete(attr_id):
     # CSRF Token Check
-    if request.form.get('csrf_token') != session.get('csrf_token'):
-        abort(403, "CSRF validation failed – token missing")
+    validate_csrf()
         
     attribute = db.session.get(Attribute, attr_id)
     if attribute:
@@ -771,8 +776,7 @@ def new_brand():
 @admin_required
 def delete_brand(id):
     # CSRF Token Check (BUG-003)
-    if request.form.get('csrf_token') != session.get('csrf_token'):
-        abort(403, "CSRF validation failed – token missing")
+    validate_csrf()
         
     brand = db.session.get(Brand, id)
     if brand:
