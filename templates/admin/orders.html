@@ -9,7 +9,7 @@
 </div>
 
 <div class="section-card">
-    {% if orders %}
+    {% if orders or pagination.total %}
     <div class="table-responsive">
         <table>
             <thead>
@@ -48,6 +48,13 @@
             </tbody>
         </table>
     </div>
+    {% if pagination.pages > 1 %}
+    <div class="admin-pagination">
+        {% if pagination.has_prev %}<a href="{{ url_for('admin.orders', page=pagination.prev_num, customer_id=customer_id or '') }}" class="page-btn">‹ Prev</a>{% endif %}
+        <span class="page-info">Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} orders)</span>
+        {% if pagination.has_next %}<a href="{{ url_for('admin.orders', page=pagination.next_num, customer_id=customer_id or '') }}" class="page-btn">Next ›</a>{% endif %}
+    </div>
+    {% endif %}
     {% else %}
     <div class="empty-state">
         <i class="fas fa-shopping-cart"></i>
@@ -58,6 +65,10 @@
 </div>
 
 <style>
+    .admin-pagination { display: flex; align-items: center; gap: 1rem; padding: 1.5rem 0 0.5rem; justify-content: center; }
+    .page-btn { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 14px; color: #475569; font-weight: 600; text-decoration: none; transition: background 0.2s; }
+    .page-btn:hover { background: #e2e8f0; }
+    .page-info { color: #64748b; font-size: 0.9rem; }
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;

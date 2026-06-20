@@ -63,9 +63,9 @@ class Product(db.Model):
     id = db.Column(db.String(50), primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     cat_name = db.Column(db.String(100))
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True)
-    sub_category_id = db.Column(db.Integer, db.ForeignKey('sub_category.id'), nullable=True)
-    brand_id = db.Column(db.Integer, db.ForeignKey('brand.id'), nullable=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True, index=True)
+    sub_category_id = db.Column(db.Integer, db.ForeignKey('sub_category.id'), nullable=True, index=True)
+    brand_id = db.Column(db.Integer, db.ForeignKey('brand.id'), nullable=True, index=True)
     price = db.Column(db.String(20), nullable=False)
     orig = db.Column(db.String(20))
     badge = db.Column(db.String(50))
@@ -76,7 +76,7 @@ class Product(db.Model):
     colors = db.Column(db.String(100))
     size_chart = db.Column(db.String(512))
     product_type = db.Column(db.String(20), default='simple') # 'simple' or 'variable'
-    stock_status = db.Column(db.String(20), default='instock') # 'instock' or 'outofstock'
+    stock_status = db.Column(db.String(20), default='instock', index=True) # 'instock' or 'outofstock'
     is_featured = db.Column(db.Boolean, default=False)
     is_new_arrival = db.Column(db.Boolean, default=False)
     
@@ -110,10 +110,10 @@ class ProductVariation(db.Model):
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_number = db.Column(db.String(20), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     total_amount = db.Column(db.String(20), nullable=False)
-    status = db.Column(db.String(50), default='Pending')
+    status = db.Column(db.String(50), default='Pending', index=True)
     
     # New Payment Fields
     payment_method = db.Column(db.String(50), default='COD') # 'COD', 'Online', 'Partial'
@@ -155,7 +155,7 @@ class Attribute(db.Model):
 
 class AttributeValue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    attribute_id = db.Column(db.Integer, db.ForeignKey('attribute.id'), nullable=False)
+    attribute_id = db.Column(db.Integer, db.ForeignKey('attribute.id'), nullable=False, index=True)
     value = db.Column(db.String(100), nullable=False)
     image_url = db.Column(db.String(512))
     attribute = db.relationship('Attribute', backref=db.backref('values', lazy=True, cascade="all, delete-orphan"))
@@ -201,7 +201,7 @@ class Review(db.Model):
     customer_location = db.Column(db.String(100))
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text)
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+    date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     status = db.Column(db.String(20), default='Pending')
     is_featured = db.Column(db.Boolean, default=False)
     product = db.relationship('Product', backref=db.backref('reviews', lazy=True))

@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, abort, request, flash, jsonify
 from functools import wraps
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import func
 
 def slugify(text):
     if not text:
@@ -8,7 +10,7 @@ def slugify(text):
     text = re.sub(r'[^\w\s-]', '', text)
     text = re.sub(r'[\s_-]+', '-', text)
     return text.strip('-')
-from models import db, User, Product, Category, SubCategory, ProductVariation, Order, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand, Review, Coupon, ProductImage
+from models import db, User, Product, Category, SubCategory, ProductVariation, Order, OrderItem, AppConfig, Attribute, AttributeValue, ProductAttribute, VariationOption, Brand, Review, Coupon, ProductImage
 from extensions import cache
 from datetime import datetime
 import os
@@ -111,7 +113,7 @@ def dashboard():
     orders_count = Order.query.count()
     
     # Real dynamic data for sections
-    recent_orders = Order.query.order_by(Order.id.desc()).limit(5).all()
+    recent_orders = Order.query.options(joinedload(Order.user)).order_by(Order.id.desc()).limit(5).all()
     
     # Low stock: check for products with 'outofstock' or just take a few products
     low_stock_products = Product.query.filter(Product.stock_status == 'outofstock').limit(3).all()
@@ -132,8 +134,13 @@ def dashboard():
 @admin_bp.route('/admin/products')
 @admin_required
 def products():
-    all_products = Product.query.all()
-    return render_template('admin/products.html', products=all_products)
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    products_pagination = Product.query.options(
+        selectinload(Product.attributes).joinedload(ProductAttribute.attribute),
+        selectinload(Product.variations).selectinload(ProductVariation.options).joinedload(VariationOption.attribute_value)
+    ).paginate(page=page, per_page=per_page, error_out=False)
+    return render_template('admin/products.html', products=products_pagination.items, pagination=products_pagination)
 
 @admin_bp.route('/admin/product/new', methods=['GET', 'POST'])
 @admin_required
@@ -418,7 +425,17 @@ def delete_product(id):
 @admin_bp.route('/admin/categories')
 @admin_required
 def categories():
-    all_categories = Category.query.all()
+    all_categories = Category.query.options(selectinload(Category.subcategories)).all()
+    if all_categories:
+        cat_ids = [c.id for c in all_categories]
+        product_counts = dict(
+            db.session.query(Product.category_id, func.count(Product.id))
+            .filter(Product.category_id.in_(cat_ids))
+            .group_by(Product.category_id)
+            .all()
+        )
+        for c in all_categories:
+            c.product_count = product_counts.get(c.id, 0)
     return render_template('admin/categories.html', categories=all_categories)
 
 @admin_bp.route('/admin/category/new', methods=['GET', 'POST'])
@@ -529,8 +546,21 @@ def edit_subcategory(id):
 @admin_bp.route('/admin/customers')
 @admin_required
 def customers():
-    all_users = User.query.filter_by(is_admin=False).all()
-    return render_template('admin/customers.html', users=all_users)
+    page = request.args.get('page', 1, type=int)
+    per_page = 30
+    users_pagination = User.query.filter_by(is_admin=False).paginate(page=page, per_page=per_page, error_out=False)
+    users = users_pagination.items
+    if users:
+        user_ids = [u.id for u in users]
+        order_counts = dict(
+            db.session.query(Order.user_id, func.count(Order.id))
+            .filter(Order.user_id.in_(user_ids))
+            .group_by(Order.user_id)
+            .all()
+        )
+        for u in users:
+            u.order_count = order_counts.get(u.id, 0)
+    return render_template('admin/customers.html', users=users, pagination=users_pagination)
 
 @admin_bp.route('/admin/customer/delete/<int:id>', methods=['POST'])
 @admin_required
@@ -548,19 +578,22 @@ def delete_customer(id):
 @admin_bp.route('/admin/orders')
 @admin_required
 def orders():
+    page = request.args.get('page', 1, type=int)
+    per_page = 30
     customer_id = request.args.get('customer_id')
+    query = Order.query.options(joinedload(Order.user))
     if customer_id:
-        all_orders = Order.query.filter_by(user_id=customer_id).order_by(Order.date.desc()).all()
-    else:
-        all_orders = Order.query.order_by(Order.date.desc()).all()
-    return render_template('admin/orders.html', orders=all_orders)
+        query = query.filter_by(user_id=customer_id)
+    orders_pagination = query.order_by(Order.date.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return render_template('admin/orders.html', orders=orders_pagination.items, pagination=orders_pagination, customer_id=customer_id)
 
 @admin_bp.route('/admin/order/<int:id>')
 @admin_required
 def view_order(id):
-    order = db.session.get(Order, id)
-    if not order:
-        abort(404)
+    order = Order.query.options(
+        joinedload(Order.user),
+        selectinload(Order.items).joinedload(OrderItem.product)
+    ).filter_by(id=id).first_or_404()
     return render_template('admin/order_detail.html', order=order)
 
 @admin_bp.route('/admin/order/update-status/<int:id>', methods=['POST'])
@@ -631,7 +664,7 @@ def settings():
 @admin_bp.route('/admin/attributes')
 @admin_required
 def admin_attributes():
-    all_attributes = Attribute.query.all()
+    all_attributes = Attribute.query.options(selectinload(Attribute.values)).all()
     for attr in all_attributes:
         attr.value_count = len(attr.values)
     return render_template('admin/attributes.html', attributes=all_attributes)
@@ -755,6 +788,16 @@ def admin_attribute_value_quick_add(attr_id):
 @admin_required
 def brands():
     all_brands = Brand.query.all()
+    if all_brands:
+        brand_ids = [b.id for b in all_brands]
+        product_counts = dict(
+            db.session.query(Product.brand_id, func.count(Product.id))
+            .filter(Product.brand_id.in_(brand_ids))
+            .group_by(Product.brand_id)
+            .all()
+        )
+        for b in all_brands:
+            b.product_count = product_counts.get(b.id, 0)
     return render_template('admin/brands.html', brands=all_brands)
 
 @admin_bp.route('/admin/brand/new', methods=['GET', 'POST'])
@@ -790,8 +833,12 @@ def delete_brand(id):
 @admin_bp.route('/admin/reviews')
 @admin_required
 def reviews():
-    all_reviews = Review.query.order_by(Review.date.desc()).all()
-    return render_template('admin/reviews.html', reviews=all_reviews)
+    page = request.args.get('page', 1, type=int)
+    per_page = 30
+    reviews_pagination = Review.query.options(
+        joinedload(Review.product)
+    ).order_by(Review.date.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return render_template('admin/reviews.html', reviews=reviews_pagination.items, pagination=reviews_pagination)
 
 @admin_bp.route('/admin/review/new', methods=['POST'])
 @admin_required

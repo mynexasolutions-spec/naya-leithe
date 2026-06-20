@@ -41,7 +41,7 @@
                     </td>
                     <td>{{ user.email }}</td>
                     <td>{{ user.join_date.strftime('%b %Y') if user.join_date else 'Oct 2023' }}</td>
-                    <td><span class="badge-tag">{{ user.orders|length }}</span></td>
+                    <td><span class="badge-tag">{{ user.order_count }}</span></td>
                     <td>
                         <div class="action-btns">
                             <a href="{{ url_for('admin.orders', customer_id=user.id) }}" class="btn-icon" title="View Order History">
@@ -59,9 +59,21 @@
             </tbody>
         </table>
     </div>
+    {% if pagination.pages > 1 %}
+    <div class="admin-pagination">
+        {% if pagination.has_prev %}<a href="{{ url_for('admin.customers', page=pagination.prev_num) }}" class="page-btn">‹ Prev</a>{% endif %}
+        <span class="page-info">Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} customers)</span>
+        {% if pagination.has_next %}<a href="{{ url_for('admin.customers', page=pagination.next_num) }}" class="page-btn">Next ›</a>{% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <style>
+    .admin-pagination { display: flex; align-items: center; gap: 1rem; padding: 1.5rem 0 0.5rem; justify-content: center; }
+    .page-btn { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 14px; color: #475569; font-weight: 600; text-decoration: none; transition: background 0.2s; }
+    .page-btn:hover { background: #e2e8f0; }
+    .page-info { color: #64748b; font-size: 0.9rem; }
+</style>
     .user-cell {
         display: flex;
         align-items: center;

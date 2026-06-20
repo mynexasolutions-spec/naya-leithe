@@ -174,22 +174,25 @@ def inject_globals():
     if 'user_id' in session:
         user = db.session.get(User, session['user_id'])
         if user and user.is_admin:
-            # Fetch real notifications for admin
-            recent_orders = Order.query.order_by(Order.id.desc()).limit(3).all()
-            for o in recent_orders:
-                admin_notifications.append({
-                    "text": f"New order #{o.order_number} received",
-                    "time": "Recently",
-                    "type": "order"
-                })
-            
-            low_stock = Product.query.filter(Product.stock_status == 'outofstock').limit(2).all()
-            for p in low_stock:
-                admin_notifications.append({
-                    "text": f"Product '{p.name}' is out of stock",
-                    "time": "Alert",
-                    "type": "stock"
-                })
+            cache_key = 'admin_notifications'
+            admin_notifications = cache.get(cache_key)
+            if admin_notifications is None:
+                admin_notifications = []
+                recent_orders = Order.query.order_by(Order.id.desc()).limit(3).all()
+                for o in recent_orders:
+                    admin_notifications.append({
+                        "text": f"New order #{o.order_number} received",
+                        "time": "Recently",
+                        "type": "order"
+                    })
+                low_stock = Product.query.filter(Product.stock_status == 'outofstock').limit(2).all()
+                for p in low_stock:
+                    admin_notifications.append({
+                        "text": f"Product '{p.name}' is out of stock",
+                        "time": "Alert",
+                        "type": "stock"
+                    })
+                cache.set(cache_key, admin_notifications, timeout=60)
 
     return dict(
         cart_count=cart_count, 
