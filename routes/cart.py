@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, jsonify, flash
-from models import db, Product, Category, SubCategory, ProductVariation, User, Address, Order, OrderItem
+from models import db, Product, Category, SubCategory, ProductVariation, User, Address, Order, OrderItem, AppConfig
+from extensions import cache
 
 cart_bp = Blueprint('cart', __name__)
 
@@ -10,19 +11,46 @@ def safe_price(price_str):
     except (ValueError, AttributeError):
         return 0
 
+@cache.cached(timeout=300, key_prefix='config:{0}')
 def get_config(k, default=None):
-    from models import AppConfig
     c = AppConfig.query.filter_by(key=k).first()
     return c.value if c else default
 
 @cart_bp.route('/cart')
 def view_cart():
-    from models import ProductVariation
+    from sqlalchemy.orm import selectinload, joinedload
+    from models import VariationOption, AttributeValue
+
     cart = session.get('cart', {})
+    if not cart:
+        return render_template('cart.html', cart_items=[], subtotal="₹0")
+
+    var_ids = []
+    simple_ids = []
+    for pid in cart.keys():
+        if pid.startswith('var:'):
+            var_ids.append(int(pid.split(':')[1]))
+        else:
+            simple_ids.append(pid.split('_')[0])
+
+    variations_map = {}
+    if var_ids:
+        variations = ProductVariation.query.options(
+            selectinload(ProductVariation.options).joinedload(VariationOption.attribute_value).joinedload(AttributeValue.attribute),
+            joinedload(ProductVariation.product).selectinload(Product.images)
+        ).filter(ProductVariation.id.in_(var_ids)).all()
+        variations_map = {v.id: v for v in variations}
+
+    products_map = {}
+    if simple_ids:
+        products = Product.query.options(
+            selectinload(Product.images)
+        ).filter(Product.id.in_(simple_ids)).all()
+        products_map = {p.id: p for p in products}
+
     cart_items = []
     subtotal = 0
     for product_id, quantity in cart.items():
-        # Key format: "var:ID" for new variations, or legacy "pid_size_color"
         product = None
         variation = None
         size, color = None, None
@@ -30,21 +58,19 @@ def view_cart():
         display_price = 0
 
         if product_id.startswith('var:'):
-            var_id = product_id.split(':')[1]
-            variation = db.session.get(ProductVariation, var_id)
+            var_id = int(product_id.split(':')[1])
+            variation = variations_map.get(var_id)
             if variation:
                 product = variation.product
                 display_price = safe_price(variation.price)
-                # Extract options
                 for opt in variation.options:
                     attr_name = opt.attribute_value.attribute.name.lower()
                     options.append({'name': opt.attribute_value.attribute.name, 'value': opt.attribute_value.value})
                     if 'size' in attr_name: size = opt.attribute_value.value
                     if 'color' in attr_name: color = opt.attribute_value.value
         else:
-            # Legacy or Simple Product
             base_id = product_id.split('_')[0]
-            product = db.session.get(Product, base_id)
+            product = products_map.get(base_id)
             if product:
                 display_price = safe_price(product.price)
                 if '_' in product_id:
@@ -57,7 +83,6 @@ def view_cart():
             item_total = display_price * quantity
             subtotal += item_total
 
-            # Find variation image if color exists
             var_img = None
             if variation:
                 color_opt = next((opt for opt in variation.options if 'color' in opt.attribute_value.attribute.name.lower()), None)
@@ -79,6 +104,7 @@ def view_cart():
                 'color': color,
                 'options': options
             })
+
     return render_template('cart.html', cart_items=cart_items, subtotal=f"₹{subtotal:,}")
 
 
@@ -121,30 +147,23 @@ def update_cart(id):
     session['cart'] = cart
     session.modified = True
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
-        # Resolve product/price from key
-        from models import ProductVariation
-        display_price = 0
-        if id.startswith('var:'):
-            var_id = id.split(':')[1]
-            var = db.session.get(ProductVariation, var_id)
-            if var: display_price = safe_price(var.price)
-        else:
-            base_id = id.split('_')[0]
-            product = db.session.get(Product, base_id)
-            if product: display_price = safe_price(product.price)
+        var_ids = [int(pid.split(':')[1]) for pid in cart.keys() if pid.startswith('var:')]
+        simple_ids = [pid.split('_')[0] for pid in cart.keys() if not pid.startswith('var:')]
 
+        prices_map = {}
+        if var_ids:
+            vars = ProductVariation.query.filter(ProductVariation.id.in_(var_ids)).all()
+            for v in vars:
+                prices_map[f'var:{v.id}'] = safe_price(v.price)
+        if simple_ids:
+            prods = Product.query.filter(Product.id.in_(simple_ids)).all()
+            for p in prods:
+                prices_map[p.id] = safe_price(p.price)
+
+        display_price = prices_map.get(id, 0)
         item_total = display_price * quantity
 
-        total = 0
-        for pid, qty in cart.items():
-            if pid.startswith('var:'):
-                v_id = pid.split(':')[1]
-                v = db.session.get(ProductVariation, v_id)
-                if v: total += safe_price(v.price) * qty
-            else:
-                base_pid = pid.split('_')[0]
-                p = db.session.get(Product, base_pid)
-                if p: total += safe_price(p.price) * qty
+        total = sum(prices_map.get(pid, 0) * qty for pid, qty in cart.items())
 
         return jsonify({
             'success': True, 
@@ -204,10 +223,7 @@ def checkout():
     user = db.session.get(User, session['user_id'])
     
     # Fetch Payment Settings
-    from models import AppConfig, Address
-    def get_config(k, default=None):
-        c = AppConfig.query.filter_by(key=k).first()
-        return c.value if c else default
+    from models import Address
 
     online_payment = get_config('online_payment_enabled') == 'true'
     partial_payment = get_config('partial_payment_enabled') == 'true'
@@ -560,11 +576,6 @@ def apply_coupon():
     }
     session.modified = True
     
-    from models import AppConfig
-    def get_config(k, default=None):
-        c = AppConfig.query.filter_by(key=k).first()
-        return c.value if c else default
-        
     shipping_enabled = get_config('shipping_enabled') == 'true'
     shipping_charges = 0.0
     free_shipping_above = 0.0
@@ -599,11 +610,6 @@ def remove_coupon():
     data = request.json or {}
     subtotal = float(data.get('subtotal', 0))
     
-    from models import AppConfig
-    def get_config(k, default=None):
-        c = AppConfig.query.filter_by(key=k).first()
-        return c.value if c else default
-        
     shipping_enabled = get_config('shipping_enabled') == 'true'
     shipping_charges = 0.0
     free_shipping_above = 0.0

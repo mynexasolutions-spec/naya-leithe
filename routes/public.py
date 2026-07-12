@@ -2,33 +2,55 @@ from flask import Blueprint, render_template, request, abort, session, jsonify
 from models import db, Category, Product, SubCategory, Review, User
 from routes.admin import slugify
 from extensions import cache
+from sqlalchemy.orm import selectinload
 
 public_bp = Blueprint('public', __name__)
 
 @public_bp.route('/')
+@cache.cached(timeout=300, query_string=True)
 def home():
     categories = Category.query.all()
     
-    # Get New Arrivals directly from DB (Limit to 12 to account for variations)
-    new_products = Product.query.filter_by(is_new_arrival=True).order_by(Product.id.desc()).limit(12).all()
+    new_products = Product.query.options(
+        selectinload(Product.category),
+        selectinload(Product.subcategory),
+        selectinload(Product.attributes),
+        selectinload(Product.images)
+    ).filter_by(is_new_arrival=True).order_by(Product.id.desc()).limit(12).all()
     new_arrivals = []
     for p in new_products:
-        new_arrivals.append({'product': p, 'variation': None}) # Simple for now, or fetch first var
+        new_arrivals.append({'product': p, 'variation': None})
         
-    # Get Featured products directly from DB
-    featured_raw = Product.query.filter_by(is_featured=True).limit(12).all()
+    featured_raw = Product.query.options(
+        selectinload(Product.category),
+        selectinload(Product.subcategory),
+        selectinload(Product.attributes),
+        selectinload(Product.images)
+    ).filter_by(is_featured=True).limit(12).all()
     featured_products = []
     for p in featured_raw:
         featured_products.append({'product': p, 'variation': None})
     
-    # Get Category Sections (Fetch only needed products)
+    all_cat_names = [cat.name for cat in categories]
+    all_cat_products = Product.query.options(
+        selectinload(Product.category),
+        selectinload(Product.subcategory),
+        selectinload(Product.attributes),
+        selectinload(Product.images)
+    ).filter(Product.cat_name.in_(all_cat_names)).limit(100).all()
+    
+    cat_products_map = {}
+    for p in all_cat_products:
+        if p.cat_name not in cat_products_map:
+            cat_products_map[p.cat_name] = []
+        if len(cat_products_map[p.cat_name]) < 8:
+            cat_products_map[p.cat_name].append(p)
+    
     category_sections = []
     for cat in categories:
-        prods_raw = Product.query.filter_by(cat_name=cat.name).limit(8).all()
-        if prods_raw:
-            section_prods = []
-            for p in prods_raw:
-                section_prods.append({'product': p, 'variation': None})
+        prods = cat_products_map.get(cat.name, [])
+        if prods:
+            section_prods = [{'product': p, 'variation': None} for p in prods]
             category_sections.append({
                 'name': cat.name,
                 'products': section_prods,
@@ -82,7 +104,14 @@ def shop():
         query = query.order_by(cast(clean_price, Numeric).desc())
     elif sort_by == 'popularity':
         from models import Review
-        query = query.outerjoin(Review).group_by(Product.id).order_by(func.count(Review.id).desc())
+        review_count = db.session.query(
+            Review.product_id, 
+            func.count(Review.id).label('review_count')
+        ).filter(Review.status == 'Approved').group_by(Review.product_id).subquery()
+        
+        query = query.outerjoin(review_count, Product.id == review_count.c.product_id).order_by(
+            func.coalesce(review_count.c.review_count, 0).desc()
+        )
     else: # newest
         query = query.order_by(Product.id.desc())
         
@@ -113,7 +142,12 @@ def product_detail(id):
         from models import ProductVariation
         selected_variation = db.session.get(ProductVariation, variation_id)
         
-    related = Product.query.filter(Product.cat_name == product.cat_name, Product.id != product.id).limit(4).all()
+    related = Product.query.options(
+        selectinload(Product.category),
+        selectinload(Product.subcategory),
+        selectinload(Product.attributes),
+        selectinload(Product.images)
+    ).filter(Product.cat_name == product.cat_name, Product.id != product.id).limit(4).all()
     
     # Get approved reviews for this product
     from models import Review

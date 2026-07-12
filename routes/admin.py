@@ -20,6 +20,7 @@ import cloudinary.uploader
 import re
 import io
 from PIL import Image
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -61,13 +62,13 @@ def save_image(file, folder):
             img = img.convert('RGB')
             
         # Scale down if extremely large
-        max_size = 1600
+        max_size = 1200
         if img.width > max_size or img.height > max_size:
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
             
         # Compress in-memory to JPEG
         img_io = io.BytesIO()
-        img.save(img_io, format='JPEG', quality=75, optimize=True)
+        img.save(img_io, format='JPEG', quality=65, optimize=True)
         img_io.seek(0)
         
         # Upload compressed bytes to Cloudinary
@@ -104,6 +105,22 @@ def delete_image(image_url):
     except Exception as e:
         print(f"Error deleting from Cloudinary: {e}")
 
+def save_images_parallel(files, folder, max_workers=4):
+    if not files:
+        return []
+    urls = [None] * len(files)
+    def _upload(idx_file):
+        idx, f = idx_file
+        if f and f.filename:
+            return (idx, save_image(f, folder))
+        return (idx, None)
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(files))) as executor:
+        futures = {executor.submit(_upload, (i, f)): i for i, f in enumerate(files)}
+        for future in as_completed(futures):
+            idx, url = future.result()
+            urls[idx] = url
+    return urls
+
 @admin_bp.route('/admin/dashboard')
 @admin_required
 def dashboard():
@@ -136,11 +153,26 @@ def dashboard():
 def products():
     page = request.args.get('page', 1, type=int)
     per_page = 20
-    products_pagination = Product.query.options(
+    category_filter = request.args.get('category')
+    status_filter = request.args.get('status')
+    
+    query = Product.query.options(
         selectinload(Product.attributes).joinedload(ProductAttribute.attribute),
         selectinload(Product.variations).selectinload(ProductVariation.options).joinedload(VariationOption.attribute_value)
-    ).paginate(page=page, per_page=per_page, error_out=False)
-    return render_template('admin/products.html', products=products_pagination.items, pagination=products_pagination)
+    )
+    
+    if category_filter and category_filter != 'all':
+        query = query.filter(Product.cat_name == category_filter)
+    
+    if status_filter and status_filter != 'all':
+        if status_filter == 'active':
+            query = query.filter(Product.stock_status == 'instock')
+        elif status_filter == 'draft':
+            query = query.filter(Product.stock_status == 'outofstock')
+    
+    products_pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    categories = Category.query.all()
+    return render_template('admin/products.html', products=products_pagination.items, pagination=products_pagination, category_filter=category_filter, status_filter=status_filter, categories=categories)
 
 @admin_bp.route('/admin/product/new', methods=['GET', 'POST'])
 @admin_required
@@ -226,10 +258,12 @@ def new_product():
         
         # Handle Gallery Images
         gallery_files = request.files.getlist('gallery[]')
-        for f in gallery_files:
-            if f and f.filename:
-                gallery_img = ProductImage(product_id=new_id, img_url=save_image(f, 'products'))
-                db.session.add(gallery_img)
+        gallery_files = [f for f in gallery_files if f and f.filename]
+        if gallery_files:
+            gallery_urls = save_images_parallel(gallery_files, 'products')
+            for url in gallery_urls:
+                if url:
+                    db.session.add(ProductImage(product_id=new_id, img_url=url))
         
         # Handle Variations if Variable Product
         if product_type == 'variable':
@@ -242,17 +276,24 @@ def new_product():
                 attr_values_map[attr_id] = request.form.getlist(f'var_attr_{attr_id}[]')
             
             num_variations = len(v_stocks)
+            var_img_files = {}
             for i in range(num_variations):
-                # Ensure variation price defaults to main price if empty
-                v_price = v_prices[i].replace('₹', '').strip() if i < len(v_prices) and v_prices[i] else price
-                v_stock = v_stocks[i] if i < len(v_stocks) else 'instock'
-                
                 v_idx = v_indices[i] if i < len(v_indices) else None
-                v_img_url = None
                 if v_idx:
                     v_img_file = request.files.get(f'var_img_{v_idx}')
                     if v_img_file and v_img_file.filename:
-                        v_img_url = save_image(v_img_file, 'products')
+                        var_img_files[i] = v_img_file
+            var_img_urls = {}
+            if var_img_files:
+                var_files_list = list(var_img_files.items())
+                var_urls = save_images_parallel([f for _, f in var_files_list], 'products')
+                for (idx, _), url in zip(var_files_list, var_urls):
+                    if url:
+                        var_img_urls[idx] = url
+            for i in range(num_variations):
+                v_price = v_prices[i].replace('₹', '').strip() if i < len(v_prices) and v_prices[i] else price
+                v_stock = v_stocks[i] if i < len(v_stocks) else 'instock'
+                v_img_url = var_img_urls.get(i, None)
 
                 variation = ProductVariation(
                     product_id=new_id,
@@ -327,10 +368,12 @@ def edit_product(id):
         
         # Handle Gallery Images
         gallery_files = request.files.getlist('gallery[]')
-        for f in gallery_files:
-            if f and f.filename:
-                gallery_img = ProductImage(product_id=product.id, img_url=save_image(f, 'products'))
-                db.session.add(gallery_img)
+        gallery_files = [f for f in gallery_files if f and f.filename]
+        if gallery_files:
+            gallery_urls = save_images_parallel(gallery_files, 'products')
+            for url in gallery_urls:
+                if url:
+                    db.session.add(ProductImage(product_id=product.id, img_url=url))
         
         # Handle removed gallery images
         remove_gallery_ids = request.form.getlist('remove_gallery[]')
@@ -363,17 +406,27 @@ def edit_product(id):
                 attr_values_map[attr_id] = request.form.getlist(f'var_attr_{attr_id}[]')
             
             num_variations = len(v_stocks)
+            var_img_files = {}
+            for i in range(num_variations):
+                v_idx = v_indices[i] if i < len(v_indices) else None
+                if v_idx:
+                    v_img_file = request.files.get(f'var_img_{v_idx}')
+                    if v_img_file and v_img_file.filename:
+                        var_img_files[i] = v_img_file
+            var_img_urls = {}
+            if var_img_files:
+                var_files_list = list(var_img_files.items())
+                var_urls = save_images_parallel([f for _, f in var_files_list], 'products')
+                for (idx, _), url in zip(var_files_list, var_urls):
+                    if url:
+                        var_img_urls[idx] = url
             for i in range(num_variations):
                 v_price = v_prices[i].replace('₹', '').strip() if i < len(v_prices) and v_prices[i] else price
                 v_stock = v_stocks[i] if i < len(v_stocks) else 'instock'
                 
-                v_idx = v_indices[i] if i < len(v_indices) else None
                 v_img_url = v_existing_imgs[i] if i < len(v_existing_imgs) else None
-                
-                if v_idx:
-                    v_img_file = request.files.get(f'var_img_{v_idx}')
-                    if v_img_file and v_img_file.filename:
-                        v_img_url = save_image(v_img_file, 'products')
+                if i in var_img_urls:
+                    v_img_url = var_img_urls[i]
                 
                 variation = ProductVariation(
                     product_id=product.id,

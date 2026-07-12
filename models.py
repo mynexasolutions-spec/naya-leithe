@@ -62,7 +62,7 @@ class Category(db.Model):
 class Product(db.Model):
     id = db.Column(db.String(50), primary_key=True)
     name = db.Column(db.String(200), nullable=False)
-    cat_name = db.Column(db.String(100))
+    cat_name = db.Column(db.String(100), index=True)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=True, index=True)
     sub_category_id = db.Column(db.Integer, db.ForeignKey('sub_category.id'), nullable=True, index=True)
     brand_id = db.Column(db.Integer, db.ForeignKey('brand.id'), nullable=True, index=True)
@@ -77,8 +77,8 @@ class Product(db.Model):
     size_chart = db.Column(db.String(512))
     product_type = db.Column(db.String(20), default='simple') # 'simple' or 'variable'
     stock_status = db.Column(db.String(20), default='instock', index=True) # 'instock' or 'outofstock'
-    is_featured = db.Column(db.Boolean, default=False)
-    is_new_arrival = db.Column(db.Boolean, default=False)
+    is_featured = db.Column(db.Boolean, default=False, index=True)
+    is_new_arrival = db.Column(db.Boolean, default=False, index=True)
     
     variations = db.relationship('ProductVariation', backref='product', lazy=True, cascade="all, delete-orphan")
     attributes = db.relationship('ProductAttribute', backref='product', lazy=True, cascade="all, delete-orphan")
@@ -195,15 +195,15 @@ class Brand(db.Model):
 
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=True)
+    product_id = db.Column(db.String(50), db.ForeignKey('product.id'), nullable=True, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     customer_name = db.Column(db.String(100))
     customer_location = db.Column(db.String(100))
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text)
     date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    status = db.Column(db.String(20), default='Pending')
-    is_featured = db.Column(db.Boolean, default=False)
+    status = db.Column(db.String(20), default='Pending', index=True)
+    is_featured = db.Column(db.Boolean, default=False, index=True)
     product = db.relationship('Product', backref=db.backref('reviews', lazy=True))
     user_rel = db.relationship('User', backref=db.backref('reviews', lazy=True))
 

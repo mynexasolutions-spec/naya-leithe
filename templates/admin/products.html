@@ -14,16 +14,16 @@
 <div class="section-card">
     <div class="table-filters">
         <div class="filter-group">
-            <select id="categoryFilter">
-                <option value="all">All Categories</option>
-                <option value="Saree">Saree</option>
-                <option value="Western Wear">Western Wear</option>
-                <option value="Ethnic Wear">Ethnic Wear</option>
+            <select id="categoryFilter" onchange="applyFilters()">
+                <option value="all" {{ 'selected' if not category_filter or category_filter == 'all' }}>All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.name }}" {{ 'selected' if category_filter == cat.name }}>{{ cat.name }}</option>
+                {% endfor %}
             </select>
-            <select id="statusFilter">
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="draft">Draft</option>
+            <select id="statusFilter" onchange="applyFilters()">
+                <option value="all" {{ 'selected' if not status_filter or status_filter == 'all' }}>All Status</option>
+                <option value="active" {{ 'selected' if status_filter == 'active' }}>Active</option>
+                <option value="draft" {{ 'selected' if status_filter == 'draft' }}>Out of Stock</option>
             </select>
         </div>
         <div class="search-input">
@@ -88,7 +88,7 @@
                             </div>
                         {% endif %}
                     </td>
-                    <td><span class="status-badge success">Active</span></td>
+                    <td><span class="status-badge {{ 'success' if product.stock_status == 'instock' else 'warning' }}">{{ 'Active' if product.stock_status == 'instock' else 'Out of Stock' }}</span></td>
                     <td>
                         <div class="action-btns">
                             <a href="{{ url_for('admin.edit_product', id=product.id) }}" class="btn-icon" title="Edit">
@@ -109,9 +109,9 @@
     </div>
     {% if pagination.pages > 1 %}
     <div class="admin-pagination">
-        {% if pagination.has_prev %}<a href="{{ url_for('admin.products', page=pagination.prev_num) }}" class="page-btn">‹ Prev</a>{% endif %}
+        {% if pagination.has_prev %}<a href="{{ url_for('admin.products', page=pagination.prev_num, category=category_filter, status=status_filter) }}" class="page-btn">‹ Prev</a>{% endif %}
         <span class="page-info">Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} products)</span>
-        {% if pagination.has_next %}<a href="{{ url_for('admin.products', page=pagination.next_num) }}" class="page-btn">Next ›</a>{% endif %}
+        {% if pagination.has_next %}<a href="{{ url_for('admin.products', page=pagination.next_num, category=category_filter, status=status_filter) }}" class="page-btn">Next ›</a>{% endif %}
     </div>
     {% endif %}
 </div>
@@ -124,7 +124,6 @@
 </style>
 
 <script>
-    // Basic search functionality
     document.getElementById('productSearch').addEventListener('keyup', function() {
         const query = this.value.toLowerCase();
         const rows = document.querySelectorAll('#productsTable tbody tr');
@@ -139,5 +138,14 @@
             }
         });
     });
+
+    function applyFilters() {
+        const category = document.getElementById('categoryFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const params = new URLSearchParams();
+        if (category !== 'all') params.set('category', category);
+        if (status !== 'all') params.set('status', status);
+        window.location.href = '{{ url_for("admin.products") }}' + (params.toString() ? '?' + params.toString() : '');
+    }
 </script>
 {% endblock %}

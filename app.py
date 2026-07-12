@@ -167,7 +167,8 @@ def inject_globals():
     cart = session.get('cart', {})
     cart_count = sum(cart.values()) if cart else 0
     
-    categories = Category.query.all()
+    from sqlalchemy.orm import selectinload
+    categories = Category.query.options(selectinload(Category.subcategories)).all()
     user = None
     admin_notifications = []
     
@@ -207,4 +208,4 @@ def favicon():
     return '', 204
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

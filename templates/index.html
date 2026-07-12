@@ -6,7 +6,7 @@
         <div class="section-title-container">
             {% if on_scroll %}
             <button class="nav-arrow desktop-nav" onclick="scrollTrack('{{ on_scroll }}', -1)">
-                <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%23ffffff" alt="prev">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
             </button>
             {% endif %}
 
@@ -14,7 +14,7 @@
 
             {% if on_scroll %}
             <button class="nav-arrow desktop-nav" onclick="scrollTrack('{{ on_scroll }}', 1)">
-                <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%23ffffff" alt="next">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </button>
             {% endif %}
         </div>
@@ -28,10 +28,10 @@
         {% if on_scroll %}
         <div class="section-nav-mobile">
             <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', -1)">
-                <img src="https://api.iconify.design/lucide:chevron-left.svg?color=%23ffffff" alt="prev">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
             </button>
             <button class="nav-arrow" onclick="scrollTrack('{{ on_scroll }}', 1)">
-                <img src="https://api.iconify.design/lucide:chevron-right.svg?color=%23ffffff" alt="next">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </button>
         </div>
         {% endif %}
@@ -154,26 +154,22 @@
 <!-- Why Choose Us -->
 <div class="why-us fade-in">
     <div class="why-item">
-        <div class="why-icon"><img src="https://api.iconify.design/lucide:truck.svg?color=%238b1a2a"
-                alt="free shipping"></div>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#8b1a2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
         <div class="why-title">Free Shipping</div>
         <div class="why-desc">On all orders above ₹999. Pan-India delivery.</div>
     </div>
     <div class="why-item">
-        <div class="why-icon"><img src="https://api.iconify.design/lucide:rotate-ccw.svg?color=%238b1a2a"
-                alt="easy returns"></div>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#8b1a2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div>
         <div class="why-title">Easy Returns</div>
         <div class="why-desc">Hassle-free 7-day return policy on all products.</div>
     </div>
     <div class="why-item">
-        <div class="why-icon"><img src="https://api.iconify.design/lucide:lock.svg?color=%238b1a2a"
-                alt="secure payment"></div>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#8b1a2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
         <div class="why-title">Secure Payment</div>
         <div class="why-desc">100% secure payments via UPI, Cards & Wallets.</div>
     </div>
     <div class="why-item">
-        <div class="why-icon"><img src="https://api.iconify.design/lucide:gem.svg?color=%238b1a2a"
-                alt="premium quality"></div>
+        <div class="why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#8b1a2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"/><path d="M11 3 8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg></div>
         <div class="why-title">Premium Quality</div>
         <div class="why-desc">Handpicked & quality-checked every single product.</div>
     </div>
@@ -269,6 +265,10 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 {% endblock %}
 
 {% block scripts %}

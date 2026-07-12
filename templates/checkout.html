@@ -2,6 +2,10 @@
 
 {% block title %}Checkout | Naye Leithe{% endblock %}
 
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+{% endblock %}
+
 {% block content %}
 <div class="checkout-page">
     <div class="checkout-container">
@@ -351,7 +355,6 @@
 </style>
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 let isCouponApplied = {% if applied_coupon %}true{% else %}false{% endif %};
 const originalSubtotal = {{ total }};
