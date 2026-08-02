@@ -1,0 +1,654 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-left">
+        <h1><i class="fas fa-warehouse" style="color: var(--primary); margin-right: 8px;"></i> Inventory Management</h1>
+        <p>Monitor, filter, and instantly manage stock availability & prices across all products and variations.</p>
+    </div>
+    <div class="header-right">
+        <a href="{{ url_for('admin.new_product') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Add New Product</a>
+    </div>
+</div>
+
+<!-- INVENTORY STATS CARDS -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(199, 86, 106, 0.1); color: var(--primary);">
+            <i class="fas fa-boxes"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ stats.total_products }}</h3>
+            <p>Total Products</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ stats.instock_products }}</h3>
+            <p>In Stock Products</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--error);">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ stats.outofstock_products }}</h3>
+            <p>Out of Stock Products</p>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+            <i class="fas fa-layer-group"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{{ stats.total_variations }}</h3>
+            <p>Total Variations ({{ stats.instock_variations }} In Stock)</p>
+        </div>
+    </div>
+</div>
+
+<!-- FILTERS & BULK ACTIONS -->
+<div class="section-card">
+    <form id="bulkForm" action="{{ url_for('admin.bulk_update_inventory') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+        
+        <div class="inventory-controls">
+            <!-- Search & Filters -->
+            <div class="table-filters" style="margin-bottom: 0; width: 100%; flex-wrap: wrap;">
+                <div class="filter-group" style="flex-wrap: wrap; gap: 8px;">
+                    <select id="categoryFilter" onchange="applyInventoryFilters()">
+                        <option value="all" {{ 'selected' if category_filter == 'all' }}>All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.name }}" {{ 'selected' if category_filter == cat.name }}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select id="statusFilter" onchange="applyInventoryFilters()">
+                        <option value="all" {{ 'selected' if status_filter == 'all' }}>All Stock Statuses</option>
+                        <option value="instock" {{ 'selected' if status_filter == 'instock' }}>In Stock Only</option>
+                        <option value="outofstock" {{ 'selected' if status_filter == 'outofstock' }}>Out of Stock Only</option>
+                    </select>
+
+                    <select id="typeFilter" onchange="applyInventoryFilters()">
+                        <option value="all" {{ 'selected' if type_filter == 'all' }}>All Product Types</option>
+                        <option value="simple" {{ 'selected' if type_filter == 'simple' }}>Simple Products</option>
+                        <option value="variable" {{ 'selected' if type_filter == 'variable' }}>Variable Products</option>
+                    </select>
+
+                    {% if search or category_filter != 'all' or status_filter != 'all' or type_filter != 'all' %}
+                    <a href="{{ url_for('admin.inventory') }}" class="btn-clear-filter"><i class="fas fa-times"></i> Reset Filters</a>
+                    {% endif %}
+                </div>
+
+                <div class="search-input">
+                    <input type="text" id="inventorySearch" placeholder="Search product name or ID..." value="{{ search }}">
+                </div>
+            </div>
+
+            <!-- Bulk Action Toolbar -->
+            <div class="bulk-toolbar">
+                <div class="bulk-left">
+                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+                    <label for="selectAllCheckbox" style="font-size: 0.85rem; font-weight: 600; cursor: pointer;">Select All</label>
+                </div>
+                <div class="bulk-right">
+                    <select name="bulk_action" id="bulkActionSelect">
+                        <option value="">-- Bulk Actions --</option>
+                        <option value="mark_instock">Mark Selected as In Stock</option>
+                        <option value="mark_outofstock">Mark Selected as Out of Stock</option>
+                    </select>
+                    <button type="submit" class="btn btn-secondary" onclick="return confirmBulkAction()">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-responsive">
+            <table id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>Product Details</th>
+                        <th>Category</th>
+                        <th>Price (₹)</th>
+                        <th>Stock Status</th>
+                        <th>Variations</th>
+                        <th>Quick Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr class="product-row" id="product-row-{{ product.id }}">
+                        <td>
+                            <input type="checkbox" name="product_ids" value="{{ product.id }}" class="product-select-cb">
+                        </td>
+                        <td>
+                            <div class="product-cell">
+                                <img src="{{ product.img }}" alt="{{ product.name }}" style="width: 46px; height: 46px; border-radius: 6px; object-fit: cover; border: 1px solid #e2e8f0;">
+                                <div class="product-info">
+                                    <strong style="color: var(--secondary);">{{ product.name }}</strong>
+                                    <span style="font-size: 0.75rem; color: #64748b;">ID: {{ product.id }}</span>
+                                    {% if product.product_type == 'variable' %}
+                                    <span class="type-pill variable"><i class="fas fa-layer-group"></i> Variable</span>
+                                    {% else %}
+                                    <span class="type-pill simple"><i class="fas fa-tag"></i> Simple</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600; font-size: 0.85rem; color: #475569;">{{ product.cat_name }}</span>
+                        </td>
+                        <td>
+                            <div class="price-edit-box">
+                                <input type="text" class="price-input" id="price-{{ product.id }}" value="{{ product.price }}" placeholder="Price">
+                                <button type="button" class="btn-save-inline" onclick="saveQuickProduct('{{ product.id }}')" title="Save Price"><i class="fas fa-check"></i></button>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="stock-toggle-wrapper">
+                                <span class="status-badge {{ 'success' if product.stock_status == 'instock' else 'danger' }}" id="status-badge-{{ product.id }}">
+                                    {{ 'In Stock' if product.stock_status == 'instock' else 'Out of Stock' }}
+                                </span>
+                                <button type="button" class="btn-stock-toggle" onclick="toggleStockAjax('{{ product.id }}')" title="Toggle Stock Status">
+                                    <i class="fas fa-sync-alt"></i> Toggle
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            {% if product.variations %}
+                            <button type="button" class="btn-expand-variations" onclick="toggleVariationRow('{{ product.id }}')">
+                                <span>{{ product.variations|length }} Variations</span>
+                                <i class="fas fa-chevron-down" id="chevron-{{ product.id }}"></i>
+                            </button>
+                            {% else %}
+                            <span style="color: #94a3b8; font-size: 0.8rem;">None</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                <a href="{{ url_for('admin.edit_product', id=product.id) }}" class="btn-icon" title="Full Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- NESTED VARIATIONS ROW -->
+                    {% if product.variations %}
+                    <tr class="variation-detail-row" id="variations-row-{{ product.id }}" style="display: none;">
+                        <td colspan="7" style="padding: 0; background: #fafafa;">
+                            <div class="variations-container">
+                                <h4><i class="fas fa-sitemap" style="color: var(--primary);"></i> Product Variations for {{ product.name }}</h4>
+                                <table class="variations-subtable">
+                                    <thead>
+                                        <tr>
+                                            <th>Variation Options</th>
+                                            <th>Variation Price</th>
+                                            <th>Stock Availability</th>
+                                            <th>Quick Save</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for var in product.variations %}
+                                        <tr>
+                                            <td>
+                                                <div class="var-options-list">
+                                                    {% for opt in var.options %}
+                                                    <span class="var-option-tag">
+                                                        <strong>{{ opt.attribute_value.attribute.name }}:</strong> {{ opt.attribute_value.value }}
+                                                    </span>
+                                                    {% endfor %}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input type="text" class="price-input var-price-input" id="var-price-{{ var.id }}" value="{{ var.price or product.price }}" placeholder="Price">
+                                            </td>
+                                            <td>
+                                                <div class="stock-toggle-wrapper">
+                                                    <span class="status-badge {{ 'success' if var.stock_status == 'instock' else 'danger' }}" id="var-badge-{{ var.id }}">
+                                                        {{ 'In Stock' if var.stock_status == 'instock' else 'Out of Stock' }}
+                                                    </span>
+                                                    <button type="button" class="btn-stock-toggle" onclick="toggleVariationStockAjax('{{ var.id }}')" title="Toggle Variation Stock">
+                                                        <i class="fas fa-sync-alt"></i> Toggle
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-secondary btn-sm" onclick="saveQuickVariation('{{ var.id }}')">
+                                                    <i class="fas fa-save"></i> Save
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2.5rem; color: #64748b;">
+                            <i class="fas fa-box-open" style="font-size: 2.5rem; color: #cbd5e1; margin-bottom: 1rem; display: block;"></i>
+                            No products found matching your inventory filters.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+
+    <!-- PAGINATION -->
+    {% if pagination.pages > 1 %}
+    <div class="admin-pagination">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('admin.inventory', page=pagination.prev_num, search=search, category=category_filter, stock_status=status_filter, product_type=type_filter) }}" class="page-btn">‹ Prev</a>
+        {% endif %}
+        <span class="page-info">Page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} items)</span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('admin.inventory', page=pagination.next_num, search=search, category=category_filter, stock_status=status_filter, product_type=type_filter) }}" class="page-btn">Next ›</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- TOAST NOTIFICATION CONTAINER -->
+<div id="toastNotification" class="toast-notification"></div>
+
+<style>
+    .inventory-controls {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .btn-clear-filter {
+        color: var(--error);
+        text-decoration: none;
+        font-size: 0.82rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: #fee2e2;
+    }
+    .bulk-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .bulk-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .bulk-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .bulk-right select {
+        padding: 6px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-family: inherit;
+    }
+    .type-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.68rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        margin-top: 4px;
+        width: fit-content;
+    }
+    .type-pill.simple {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    .type-pill.variable {
+        background: #fef3c7;
+        color: #b45309;
+    }
+    .price-edit-box {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .price-input {
+        width: 80px;
+        padding: 5px 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-family: inherit;
+    }
+    .price-input:focus {
+        border-color: var(--primary);
+        outline: none;
+    }
+    .btn-save-inline {
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s;
+    }
+    .btn-save-inline:hover {
+        opacity: 0.85;
+    }
+    .stock-toggle-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    .status-badge.success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .status-badge.danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .btn-stock-toggle {
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #475569;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s;
+    }
+    .btn-stock-toggle:hover {
+        background: #e2e8f0;
+        color: var(--secondary);
+    }
+    .btn-expand-variations {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .btn-expand-variations:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+    .variations-container {
+        padding: 1.25rem;
+        border-left: 3px solid var(--primary);
+        margin: 0.5rem 1rem 1rem 1rem;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .variations-container h4 {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        color: var(--secondary);
+    }
+    .variations-subtable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+    }
+    .variations-subtable th {
+        background: #f8fafc;
+        padding: 8px 12px;
+        text-align: left;
+        color: #475569;
+        font-weight: 600;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .variations-subtable td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    .var-option-tag {
+        display: inline-block;
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-right: 4px;
+        font-size: 0.75rem;
+    }
+    .toast-notification {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: #1e293b;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        display: none;
+        z-index: 10000;
+        transition: opacity 0.3s ease;
+    }
+</style>
+
+<script>
+    const csrfToken = "{{ session.get('csrf_token') }}";
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toastNotification');
+        toast.textContent = message;
+        toast.style.background = isError ? '#ef4444' : '#10b981';
+        toast.style.display = 'block';
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => { toast.style.display = 'none'; }, 300);
+        }, 3000);
+    }
+
+    function applyInventoryFilters() {
+        const category = document.getElementById('categoryFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const type = document.getElementById('typeFilter').value;
+        const search = document.getElementById('inventorySearch').value.trim();
+
+        const params = new URLSearchParams();
+        if (category !== 'all') params.set('category', category);
+        if (status !== 'all') params.set('stock_status', status);
+        if (type !== 'all') params.set('product_type', type);
+        if (search) params.set('search', search);
+
+        window.location.href = '{{ url_for("admin.inventory") }}' + (params.toString() ? '?' + params.toString() : '');
+    }
+
+    document.getElementById('inventorySearch').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyInventoryFilters();
+        }
+    });
+
+    function toggleSelectAll(master) {
+        const checkboxes = document.querySelectorAll('.product-select-cb');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+    }
+
+    function confirmBulkAction() {
+        const action = document.getElementById('bulkActionSelect').value;
+        if (!action) {
+            alert('Please select a bulk action to apply.');
+            return false;
+        }
+        const checked = document.querySelectorAll('.product-select-cb:checked');
+        if (checked.length === 0) {
+            alert('Please select at least one product.');
+            return false;
+        }
+        return confirm(`Are you sure you want to apply this bulk action to ${checked.length} product(s)?`);
+    }
+
+    function toggleVariationRow(productId) {
+        const row = document.getElementById('variations-row-' + productId);
+        const icon = document.getElementById('chevron-' + productId);
+        if (row.style.display === 'none' || !row.style.display) {
+            row.style.display = 'table-row';
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        } else {
+            row.style.display = 'none';
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        }
+    }
+
+    async function toggleStockAjax(productId) {
+        try {
+            const response = await fetch('/admin/inventory/toggle-stock/' + productId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ csrf_token: csrfToken })
+            });
+            const data = await response.json();
+            if (data.success) {
+                const badge = document.getElementById('status-badge-' + productId);
+                if (data.new_status === 'instock') {
+                    badge.className = 'status-badge success';
+                    badge.textContent = 'In Stock';
+                } else {
+                    badge.className = 'status-badge danger';
+                    badge.textContent = 'Out of Stock';
+                }
+                showToast(data.message);
+            } else {
+                showToast(data.message || 'Failed to update stock', true);
+            }
+        } catch (e) {
+            showToast('Network error updating stock', true);
+        }
+    }
+
+    async function toggleVariationStockAjax(varId) {
+        try {
+            const response = await fetch('/admin/inventory/toggle-variation-stock/' + varId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ csrf_token: csrfToken })
+            });
+            const data = await response.json();
+            if (data.success) {
+                const badge = document.getElementById('var-badge-' + varId);
+                if (data.new_status === 'instock') {
+                    badge.className = 'status-badge success';
+                    badge.textContent = 'In Stock';
+                } else {
+                    badge.className = 'status-badge danger';
+                    badge.textContent = 'Out of Stock';
+                }
+                showToast(data.message);
+            } else {
+                showToast(data.message || 'Failed to update variation stock', true);
+            }
+        } catch (e) {
+            showToast('Network error updating variation stock', true);
+        }
+    }
+
+    async function saveQuickProduct(productId) {
+        const price = document.getElementById('price-' + productId).value;
+        try {
+            const response = await fetch('/admin/inventory/quick-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    csrf_token: csrfToken,
+                    product_id: productId,
+                    price: price
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                showToast(data.message);
+            } else {
+                showToast(data.message || 'Failed to update price', true);
+            }
+        } catch (e) {
+            showToast('Error saving product price', true);
+        }
+    }
+
+    async function saveQuickVariation(varId) {
+        const price = document.getElementById('var-price-' + varId).value;
+        try {
+            const response = await fetch('/admin/inventory/update-variation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    csrf_token: csrfToken,
+                    variation_id: varId,
+                    price: price
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                showToast(data.message);
+            } else {
+                showToast(data.message || 'Failed to update variation price', true);
+            }
+        } catch (e) {
+            showToast('Error saving variation price', true);
+        }
+    }
+</script>
+{% endblock %}

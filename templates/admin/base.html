@@ -23,8 +23,11 @@
                     <li class="{{ 'active' if request.endpoint == 'admin.dashboard' }}">
                         <a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-chart-line"></i> Dashboard</a>
                     </li>
-                    <li class="{{ 'active' if 'product' in request.endpoint }}">
+                    <li class="{{ 'active' if 'product' in request.endpoint and 'inventory' not in request.endpoint }}">
                         <a href="{{ url_for('admin.products') }}"><i class="fas fa-box"></i> Products</a>
+                    </li>
+                    <li class="{{ 'active' if 'inventory' in request.endpoint }}">
+                        <a href="{{ url_for('admin.inventory') }}"><i class="fas fa-warehouse"></i> Inventory</a>
                     </li>
                     <li class="{{ 'active' if 'category' in request.endpoint }}">
                         <a href="{{ url_for('admin.categories') }}"><i class="fas fa-list"></i> Categories</a>
@@ -73,13 +76,31 @@
                     </div>
                 </div>
                 <div class="header-right">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                    {% for category, message in messages %}
-                    <div class="flash-alert flash-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                    {% endif %}
-                    {% endwith %}
+                    <!-- Toast Notification Container -->
+                    <div id="adminToastContainer" class="admin-toast-container">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="toast-card toast-{{ category }}">
+                            <div class="toast-icon">
+                                {% if category == 'success' %}
+                                <i class="fas fa-check-circle"></i>
+                                {% elif category == 'error' or category == 'danger' %}
+                                <i class="fas fa-exclamation-circle"></i>
+                                {% else %}
+                                <i class="fas fa-info-circle"></i>
+                                {% endif %}
+                            </div>
+                            <div class="toast-content">
+                                <div class="toast-title">{{ 'Success' if category == 'success' else ('Error' if category in ['error', 'danger'] else 'Notice') }}</div>
+                                <div class="toast-msg">{{ message }}</div>
+                            </div>
+                            <button type="button" class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+                    </div>
 
                     <div class="header-icon-btn notifications-dropdown">
                         <i class="far fa-bell"></i>
@@ -129,6 +150,9 @@
         </main>
     </div>
 
+    <!-- TOP SLIDER PROGRESS BAR FOR INSTANT NAVIGATION -->
+    <div id="adminTopProgressBar" style="position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, #c7566a, #d88c9a, #f59e0b); z-index: 999999; width: 0%; opacity: 0; transition: width 0.25s ease, opacity 0.2s ease; pointer-events: none;"></div>
+
     <script>
         document.getElementById('sidebarToggle').addEventListener('click', function () {
             document.querySelector('.admin-container').classList.toggle('sidebar-active');
@@ -148,18 +172,238 @@
             }
         });
 
-        // Auto-hide flash messages after 3 seconds
+        // Auto-hide toast notifications after 3.5 seconds
         document.addEventListener('DOMContentLoaded', function() {
-            const flashes = document.querySelectorAll('.flash-alert');
-            flashes.forEach(flash => {
+            const toasts = document.querySelectorAll('.toast-card');
+            toasts.forEach(toast => {
                 setTimeout(() => {
-                    flash.style.opacity = '0';
-                    flash.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => flash.remove(), 500);
-                }, 3000);
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    toast.style.transition = 'all 0.4s ease';
+                    setTimeout(() => toast.remove(), 400);
+                }, 3500);
             });
         });
+
+        // --- INSTANT SPA NAVIGATION & PREFETCHING FOR ADMIN SIDEBAR & LINKS ---
+        const adminPrefetchCache = new Map();
+
+        function startProgressBar() {
+            const bar = document.getElementById('adminTopProgressBar');
+            if (bar) {
+                bar.style.opacity = '1';
+                bar.style.width = '30%';
+                setTimeout(() => { bar.style.width = '70%'; }, 100);
+            }
+        }
+
+        function finishProgressBar() {
+            const bar = document.getElementById('adminTopProgressBar');
+            if (bar) {
+                bar.style.width = '100%';
+                setTimeout(() => {
+                    bar.style.opacity = '0';
+                    setTimeout(() => { bar.style.width = '0%'; }, 200);
+                }, 200);
+            }
+        }
+
+        async function prefetchAdminUrl(url) {
+            if (!url || adminPrefetchCache.has(url) || url.includes('/logout') || url.includes('#') || url.startsWith('javascript:')) return;
+            try {
+                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (res.ok) {
+                    const text = await res.text();
+                    adminPrefetchCache.set(url, text);
+                }
+            } catch (e) {
+                // ignore prefetch failure
+            }
+        }
+
+        async function navigateAdminInstant(url, pushState = true) {
+            if (!url || url.includes('/logout') || url.includes('#') || url.startsWith('javascript:')) {
+                window.location.href = url;
+                return;
+            }
+
+            startProgressBar();
+
+            // Highlight sidebar item instantly (0ms response!)
+            const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+            sidebarLinks.forEach(link => {
+                const li = link.closest('li');
+                if (li) {
+                    if (link.getAttribute('href') === url || link.href === url) {
+                        li.classList.add('active');
+                    } else {
+                        li.classList.remove('active');
+                    }
+                }
+            });
+
+            let htmlText = adminPrefetchCache.get(url);
+            if (!htmlText) {
+                try {
+                    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (res.ok) {
+                        htmlText = await res.text();
+                        adminPrefetchCache.set(url, htmlText);
+                    } else {
+                        window.location.href = url;
+                        return;
+                    }
+                } catch (e) {
+                    window.location.href = url;
+                    return;
+                }
+            }
+
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlText, 'text/html');
+
+                const newContent = doc.querySelector('.content-area');
+                const currentContent = document.querySelector('.content-area');
+
+                if (newContent && currentContent) {
+                    currentContent.innerHTML = newContent.innerHTML;
+                    document.title = doc.title || document.title;
+
+                    if (pushState) {
+                        history.pushState({ url: url }, '', url);
+                    }
+
+                    // Execute inline scripts inside swapped content
+                    const scripts = currentContent.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    window.location.href = url;
+                }
+            } catch (e) {
+                window.location.href = url;
+            } finally {
+                finishProgressBar();
+            }
+        }
+
+        // Attach Instant Nav & Prefetch on Hover listeners
+        document.addEventListener('mouseover', function(e) {
+            const a = e.target.closest('.sidebar-nav a, .admin-pagination a, .top-header a');
+            if (a && a.href && a.origin === window.location.origin) {
+                prefetchAdminUrl(a.href);
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            const a = e.target.closest('.sidebar-nav a');
+            if (a && a.href && a.origin === window.location.origin && !a.getAttribute('target') && !a.href.includes('/logout')) {
+                e.preventDefault();
+                navigateAdminInstant(a.href);
+            }
+        });
+
+        window.addEventListener('popstate', function(e) {
+            if (e.state && e.state.url) {
+                navigateAdminInstant(e.state.url, false);
+            } else {
+                navigateAdminInstant(window.location.href, false);
+            }
+        });
     </script>
+    <style>
+        .admin-toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .toast-card {
+            pointer-events: auto;
+            min-width: 320px;
+            max-width: 440px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border-left: 5px solid var(--primary);
+            animation: slideInToast 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.3s ease;
+        }
+        .toast-card.toast-success {
+            border-left-color: #10b981;
+        }
+        .toast-card.toast-success .toast-icon {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.12);
+        }
+        .toast-card.toast-error, .toast-card.toast-danger {
+            border-left-color: #ef4444;
+        }
+        .toast-card.toast-error .toast-icon, .toast-card.toast-danger .toast-icon {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.12);
+        }
+        .toast-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .toast-content {
+            flex: 1;
+        }
+        .toast-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+        .toast-msg {
+            font-size: 0.82rem;
+            color: #475569;
+        }
+        .toast-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+        }
+        .toast-close:hover {
+            color: #1e293b;
+        }
+        @keyframes slideInToast {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
     {% block scripts %}{% endblock %}
 </body>
 

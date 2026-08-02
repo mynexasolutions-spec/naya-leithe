@@ -1,5 +1,8 @@
 from flask import Blueprint, render_template, request, abort, session, jsonify
-from models import db, Category, Product, SubCategory, Review, User
+from models import (
+    db, Category, Product, SubCategory, Review, User,
+    ProductAttribute, Attribute, AttributeValue, ProductVariation, VariationOption
+)
 from routes.admin import slugify
 from extensions import cache
 from sqlalchemy.orm import selectinload
@@ -9,7 +12,10 @@ public_bp = Blueprint('public', __name__)
 @public_bp.route('/')
 @cache.cached(timeout=300, query_string=True)
 def home():
-    categories = Category.query.all()
+    categories = cache.get('all_categories_nav')
+    if not categories:
+        categories = Category.query.options(selectinload(Category.subcategories)).all()
+        cache.set('all_categories_nav', categories, timeout=300)
     
     new_products = Product.query.options(
         selectinload(Product.category),
@@ -71,7 +77,12 @@ def shop():
     selected_categories = request.args.getlist('category')
     selected_subcategories = request.args.getlist('subcategory')
     
-    query = Product.query
+    query = Product.query.options(
+        selectinload(Product.category),
+        selectinload(Product.subcategory),
+        selectinload(Product.attributes),
+        selectinload(Product.images)
+    )
     
     # Text Search
     search_query = request.args.get('search', '').strip()
@@ -103,7 +114,6 @@ def shop():
     elif sort_by == 'price_desc':
         query = query.order_by(cast(clean_price, Numeric).desc())
     elif sort_by == 'popularity':
-        from models import Review
         review_count = db.session.query(
             Review.product_id, 
             func.count(Review.id).label('review_count')
@@ -121,7 +131,10 @@ def shop():
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     products = pagination.items
 
-    categories = Category.query.all()
+    categories = cache.get('all_categories_nav')
+    if not categories:
+        categories = Category.query.options(selectinload(Category.subcategories)).all()
+        cache.set('all_categories_nav', categories, timeout=300)
     
     return render_template('shop.html', 
                            products=products, 
@@ -132,15 +145,24 @@ def shop():
 
 @public_bp.route('/product/<id>')
 def product_detail(id):
-    product = db.session.get(Product, id)
+    product = Product.query.options(
+        selectinload(Product.category),
+        selectinload(Product.subcategory),
+        selectinload(Product.images),
+        selectinload(Product.attributes).selectinload(ProductAttribute.attribute).selectinload(Attribute.values),
+        selectinload(Product.variations).selectinload(ProductVariation.options).selectinload(VariationOption.attribute_value),
+        selectinload(Product.reviews)
+    ).filter_by(id=id).first()
+    
     if not product:
         abort(404)
     
     variation_id = request.args.get('v')
     selected_variation = None
     if variation_id:
-        from models import ProductVariation
-        selected_variation = db.session.get(ProductVariation, variation_id)
+        selected_variation = ProductVariation.query.options(
+            selectinload(ProductVariation.options).selectinload(VariationOption.attribute_value)
+        ).filter_by(id=variation_id).first()
         
     related = Product.query.options(
         selectinload(Product.category),
@@ -150,8 +172,8 @@ def product_detail(id):
     ).filter(Product.cat_name == product.cat_name, Product.id != product.id).limit(4).all()
     
     # Get approved reviews for this product
-    from models import Review
-    approved_reviews = Review.query.filter_by(product_id=id, status='Approved').order_by(Review.date.desc()).all()
+    approved_reviews = [r for r in product.reviews if r.status == 'Approved']
+    approved_reviews.sort(key=lambda x: x.date if x.date else '', reverse=True)
     
     return render_template('product.html', 
                            product=product, 
@@ -198,7 +220,12 @@ def add_review(product_id):
 @public_bp.route('/wishlist')
 def wishlist():
     wishlist_ids = session.get('wishlist', [])
-    products = Product.query.filter(Product.id.in_(wishlist_ids)).all()
+    products = Product.query.options(
+        selectinload(Product.category),
+        selectinload(Product.subcategory),
+        selectinload(Product.attributes),
+        selectinload(Product.images)
+    ).filter(Product.id.in_(wishlist_ids)).all() if wishlist_ids else []
     return render_template('wishlist.html', products=products)
 
 @public_bp.route('/blogs')

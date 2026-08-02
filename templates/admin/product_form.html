@@ -106,13 +106,12 @@
 
             <!-- ATTRIBUTE SELECTION -->
             <div id="attributeSelectionSection" class="form-group full-width"
-                style="display: {{ 'block' if product and product.product_type == 'variable' else 'none' }};">
+                style="display: block;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <label style="margin-bottom: 0;">Select Product Attributes</label>
+                    <label style="margin-bottom: 0; font-weight: 700; font-size: 1.05rem;">Select Product Attributes & Options (Size, Color, etc.)</label>
                     <button type="button" onclick="openNewAttrModal()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">+ Add New Attribute</button>
                 </div>
-                <p class="form-hint" style="margin-bottom: 1rem;">Choose which attributes (e.g. Size, Color, Fabric)
-                    apply to this product.</p>
+                <p class="form-hint" style="margin-bottom: 1rem;">Choose which attributes (e.g. Size, Color, Fabric) apply to this product and select their available options.</p>
                 <div class="attributes-selection-grid" id="mainAttributesGrid">
                     {% for attr in attributes %}
                     <div class="attr-selection-row-container"
@@ -133,14 +132,16 @@
                         </div>
 
                         <div id="attr_values_{{ attr.id }}" class="attr-values-grid"
-                            style="display: {{ 'flex' if product and attr.id in product.attributes|map(attribute='attribute_id') else 'none' }}; flex-wrap: wrap; gap: 15px; padding: 10px; background: #fcfcfc; border-radius: 8px; margin-top: 10px;">
+                            style="display: {{ 'flex' if (product and (attr.id in product.attributes|map(attribute='attribute_id') or (product.sizes and 'size' in attr.name.lower()) or (product.colors and 'color' in attr.name.lower()))) else 'none' }}; flex-wrap: wrap; gap: 15px; padding: 10px; background: #fcfcfc; border-radius: 8px; margin-top: 10px;">
                             {% for val in attr.values %}
                             <label
                                 style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; padding: 5px 12px; background: white; border: 1px solid #edf2f7; border-radius: 20px; transition: all 0.2s;">
                                 <input type="checkbox" name="attr_val_{{ attr.id }}[]" value="{{ val.id }}"
-                                    style="width: 16px; height: 16px;" {% if product and val.id in
-                                    product.variations|map(attribute='options'
-                                    )|sum(start=[])|map(attribute='attribute_value_id' ) %}checked{% endif %}>
+                                    style="width: 16px; height: 16px;" {% if product and (
+                                    val.id in product.variations|map(attribute='options')|sum(start=[])|map(attribute='attribute_value_id') or
+                                    (product.sizes and val.value in product.sizes) or
+                                    (product.colors and val.value in product.colors)
+                                ) %}checked{% endif %}>
                                 <span style="font-weight: 500;">{{ val.value }}</span>
                             </label>
                             {% endfor %}
@@ -404,12 +405,16 @@
         const varSection = document.getElementById('variationsSection');
         const attrSection = document.getElementById('attributeSelectionSection');
 
-        if (type === 'variable') {
-            varSection.style.display = 'block';
+        if (attrSection) {
             attrSection.style.display = 'block';
-        } else {
-            varSection.style.display = 'none';
-            attrSection.style.display = 'none';
+        }
+
+        if (varSection) {
+            if (type === 'variable') {
+                varSection.style.display = 'block';
+            } else {
+                varSection.style.display = 'none';
+            }
         }
     }
 
@@ -662,6 +667,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        toggleVariations();
+        document.querySelectorAll('input[name="product_attributes[]"]').forEach(cb => {
+            if (cb.checked) {
+                toggleAttrValues(cb.value);
+            }
+        });
+
         if (document.getElementById('categorySelect').value) {
             const catId = document.getElementById('categorySelect').value;
             const subSelect = document.getElementById('subCategorySelect');

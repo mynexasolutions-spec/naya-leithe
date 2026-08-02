@@ -26,9 +26,18 @@
         <td class="font-bold">{{ a.name }}</td>
         <td class="text-muted monospace">{{ a.slug }}</td>
         <td>
-          <a href="{{ url_for('admin.admin_attribute_values', attr_id=a.id) }}" class="text-indigo" style="font-weight:600;">
-            {{ a.value_count or 0 }} values
-          </a>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+            {% for val in a.values %}
+            <span class="attr-val-badge" style="background: #f1f5f9; color: #334155; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; border: 1px solid #e2e8f0; display: inline-flex; align-items: center;">
+              {{ val.value }}
+            </span>
+            {% else %}
+            <span style="color: #94a3b8; font-size: 0.8rem; font-style: italic;">No values added yet</span>
+            {% endfor %}
+            <a href="{{ url_for('admin.admin_attribute_values', attr_id=a.id) }}" style="font-size: 0.78rem; font-weight: 700; color: var(--primary); text-decoration: none; padding: 3px 8px; background: rgba(199, 86, 106, 0.08); border-radius: 8px; margin-left: 4px;">
+              Manage ({{ a.value_count or 0 }}) →
+            </a>
+          </div>
         </td>
         <td style="text-align:right;">
           <div style="display:flex; justify-content:flex-end; gap:0.5rem;">

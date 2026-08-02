@@ -1,12 +1,12 @@
 import os
-from flask import Flask, session
+import secrets
+from flask import Flask, session, request, g
 from models import db, Category, User, AppConfig
 from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from extensions import oauth, cache
-
 
 load_dotenv()
 
@@ -34,6 +34,7 @@ if ProxyFix:
             app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
         except Exception as e:
             print(f"Failed to initialize ProxyFix: {e}")
+
 app.config['CACHE_TYPE'] = 'SimpleCache'
 app.config['CACHE_DEFAULT_TIMEOUT'] = 300
 cache.init_app(app)
@@ -43,7 +44,6 @@ if not app.debug:
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.jinja_env.add_extension('jinja2.ext.do')
 
-import secrets
 
 @app.before_request
 def ensure_csrf_token():
@@ -53,7 +53,7 @@ def ensure_csrf_token():
 
 @app.template_filter('optimize')
 def optimize_image(url, width=500, quality='auto'):
-    if not url or 'cloudinary.com' not in url:
+    if not url or not isinstance(url, str) or 'cloudinary.com' not in url:
         return url
     if '/upload/' in url:
         parts = url.split('/upload/')
@@ -72,10 +72,8 @@ google = oauth.register(
 
 
 # Database Configuration
-db_url = os.getenv('DATABASE_URL')
-if not db_url:
-    raise RuntimeError("DATABASE_URL not found in environment variables")
-elif db_url.startswith("postgres://"):
+db_url = os.getenv('DATABASE_URL', 'sqlite:///database.db')
+if db_url.startswith("postgres://"):
     # Fix for newer SQLAlchemy/Heroku/Vercel postgres URLs
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
@@ -154,46 +152,62 @@ except Exception as e:
 def inject_globals():
     from models import Product, Order
     
-    # Calculate valid wishlist count
-    wishlist = session.get('wishlist', [])
+    # Calculate valid wishlist count (skip DB query for admin routes)
     wishlist_count = 0
-    if wishlist:
-        try:
-            wishlist_count = Product.query.filter(Product.id.in_(wishlist)).count()
-        except:
-            wishlist_count = 0
+    if not request.path.startswith('/admin'):
+        wishlist = session.get('wishlist', [])
+        if wishlist:
+            try:
+                wishlist_count = Product.query.filter(Product.id.in_(wishlist)).count()
+            except Exception:
+                wishlist_count = 0
             
     # Simple cart count
     cart = session.get('cart', {})
     cart_count = sum(cart.values()) if cart else 0
     
     from sqlalchemy.orm import selectinload
-    categories = Category.query.options(selectinload(Category.subcategories)).all()
+    categories = cache.get('all_categories_nav')
+    if not categories:
+        try:
+            categories = Category.query.options(selectinload(Category.subcategories)).all()
+            cache.set('all_categories_nav', categories, timeout=300)
+        except Exception:
+            categories = []
+
     user = None
     admin_notifications = []
     
     if 'user_id' in session:
-        user = db.session.get(User, session['user_id'])
+        if 'user' not in g:
+            try:
+                g.user = db.session.get(User, session['user_id'])
+            except Exception:
+                g.user = None
+        user = g.user
         if user and user.is_admin:
             cache_key = 'admin_notifications'
             admin_notifications = cache.get(cache_key)
             if admin_notifications is None:
                 admin_notifications = []
-                recent_orders = Order.query.order_by(Order.id.desc()).limit(3).all()
-                for o in recent_orders:
-                    admin_notifications.append({
-                        "text": f"New order #{o.order_number} received",
-                        "time": "Recently",
-                        "type": "order"
-                    })
-                low_stock = Product.query.filter(Product.stock_status == 'outofstock').limit(2).all()
-                for p in low_stock:
-                    admin_notifications.append({
-                        "text": f"Product '{p.name}' is out of stock",
-                        "time": "Alert",
-                        "type": "stock"
-                    })
-                cache.set(cache_key, admin_notifications, timeout=60)
+                try:
+                    recent_orders = Order.query.order_by(Order.id.desc()).limit(3).all()
+                    for o in recent_orders:
+                        admin_notifications.append({
+                            "text": f"New order #{o.order_number} received",
+                            "time": "Recently",
+                            "type": "order"
+                        })
+                    low_stock = Product.query.filter(Product.stock_status == 'outofstock').limit(2).all()
+                    for p in low_stock:
+                        admin_notifications.append({
+                            "text": f"Product '{p.name}' is out of stock",
+                            "time": "Alert",
+                            "type": "stock"
+                        })
+                    cache.set(cache_key, admin_notifications, timeout=60)
+                except Exception:
+                    admin_notifications = []
 
     return dict(
         cart_count=cart_count, 
@@ -209,3 +223,4 @@ def favicon():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
+
